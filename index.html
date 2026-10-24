@@ -1,1 +1,81 @@
-<h1>Teste de Time Sheet</h1>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Ponto</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .botoes {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        #btn-in {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+
+        #btn-out {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+
+        #log-ponto {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            min-height: 100px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Controle de Ponto</h1>
+
+    <div class="botoes">
+        <button id="btn-in" onclick="registrarPonto('Clock In')">Clock In</button>
+        <button id="btn-out" onclick="registrarPonto('Clock Out')">Clock Out</button>
+    </div>
+
+    <h2>Registros Atuais</h2>
+    <div id="log-ponto">
+        <!-- Os registros de horário aparecerão aqui -->
+    </div>
+
+    <script>
+        function registrarPonto(tipo) {
+            // Captura o momento exato em que o botão foi clicado
+            const agora = new Date();
+
+            // Extrai a hora no formato local (HH:MM:SS)
+            const horaFormatada = agora.toLocaleTimeString('pt-BR');
+
+            // Prepara o texto para inserir na tela usando template literals
+            const mensagem = `<p><strong>${tipo}:</strong> ${horaFormatada}</p>`;
+
+            // Adiciona o registro na tela de visualização
+            const divLog = document.getElementById('log-ponto');
+            divLog.innerHTML += mensagem;
+        }
+    </script>
+
+</body>
+</html>
