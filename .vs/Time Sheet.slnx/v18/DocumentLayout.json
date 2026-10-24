@@ -1,0 +1,37 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\pedro\\Documents\\apps\\time sheet\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{4734BCCA-A519-1087-8FC5-E23C024C22AD}|Time Sheet.vbproj|c:\\users\\pedro\\documents\\apps\\time sheet\\index.html||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{4734BCCA-A519-1087-8FC5-E23C024C22AD}|Time Sheet.vbproj|solutionrelative:index.html||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "index.html",
+              "DocumentMoniker": "C:\\Users\\pedro\\Documents\\apps\\time sheet\\index.html",
+              "RelativeDocumentMoniker": "index.html",
+              "ToolTip": "C:\\Users\\pedro\\Documents\\apps\\time sheet\\index.html",
+              "RelativeToolTip": "index.html",
+              "ViewState": "AgIAADEAAAAAAAAAAAAkwDoAAAAYAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
+              "WhenOpened": "2026-10-24T17:09:11.895Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -5,77 +5,175 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Ponto</title>
     <style>
-        body {
-            font-family: sans-serif;
-            padding: 20px;
-            max-width: 500px;
-            margin: 0 auto;
-        }
-
-        .botoes {
-            margin-bottom: 20px;
-            display: flex;
-            gap: 10px;
-        }
-
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-
-        #btn-in {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-        }
-
-        #btn-out {
-            background-color: #f44336;
-            color: white;
-            border: none;
-            border-radius: 4px;
-        }
-
-        #log-ponto {
-            background: #f4f4f4;
-            padding: 15px;
-            border-radius: 5px;
-            min-height: 100px;
-        }
+        body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; }
+        #relogio { font-size: 2.5em; font-weight: bold; text-align: center; margin-bottom: 20px; color: #333; }
+        .funcionarios { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .btn-func { padding: 10px 15px; font-size: 16px; border: 1px solid #ccc; background: #fff; cursor: pointer; border-radius: 4px; }
+        .btn-func.ativo { background: #2196F3; color: white; border-color: #2196F3; }
+        .botoes-ponto { display: flex; gap: 10px; margin-bottom: 20px; }
+        .btn-ponto { padding: 12px 20px; font-size: 16px; cursor: pointer; border: none; border-radius: 4px; color: white; font-weight: bold; }
+        #btn-in { background-color: #4CAF50; }
+        #btn-out { background-color: #f44336; }
+        #btn-in:disabled, #btn-out:disabled { background-color: #ccc; cursor: not-allowed; }
+        #status-msg { margin-bottom: 15px; font-weight: bold; color: #555; }
+        #log-ponto { background: #f4f4f4; padding: 15px; border-radius: 5px; min-height: 100px; max-height: 400px; overflow-y: auto; }
+        .registro-item { border-bottom: 1px solid #ddd; padding: 8px 0; }
     </style>
 </head>
 <body>
 
     <h1>Controle de Ponto</h1>
+    
+    <!-- Relógio em tempo real -->
+    <div id="relogio">00:00:00</div>
+    
+    <h3>Selecione o Funcionário:</h3>
+    <div class="funcionarios" id="lista-funcionarios"></div>
 
-    <div class="botoes">
-        <button id="btn-in" onclick="registrarPonto('Clock In')">Clock In</button>
-        <button id="btn-out" onclick="registrarPonto('Clock Out')">Clock Out</button>
+    <div id="status-msg">Nenhum funcionário selecionado</div>
+
+    <div class="botoes-ponto">
+        <button class="btn-ponto" id="btn-in" onclick="registrarPonto('in')" disabled>Clock In</button>
+        <button class="btn-ponto" id="btn-out" onclick="registrarPonto('out')" disabled>Clock Out</button>
     </div>
 
-    <h2>Registros Atuais</h2>
-    <div id="log-ponto">
-        <!-- Os registros de horário aparecerão aqui -->
-    </div>
+    <h2>Histórico de Registros</h2>
+    <div id="log-ponto"></div>
 
     <script>
+        const nomes = ['Pedro', 'Max', 'Carlos', 'Sanny'];
+        let usuarioSelecionado = null;
+        
+        let registros = JSON.parse(localStorage.getItem('registrosPonto')) || [];
+        let estadoUsuarios = JSON.parse(localStorage.getItem('estadoUsuarios')) || {};
+
+        nomes.forEach(nome => {
+            if (!estadoUsuarios[nome]) {
+                estadoUsuarios[nome] = { trabalhando: false, horaEntrada: null };
+            }
+        });
+
+        // Função para atualizar o relógio global da interface
+        function atualizarRelogio() {
+            const agora = new Date();
+            document.getElementById('relogio').innerText = agora.toLocaleTimeString('pt-BR');
+        }
+
+        function selecionar(nome) {
+            usuarioSelecionado = nome;
+            renderizarTela();
+            atualizarContador();
+        }
+
         function registrarPonto(tipo) {
-            // Captura o momento exato em que o botão foi clicado
+            if (!usuarioSelecionado) return;
+
+            const estado = estadoUsuarios[usuarioSelecionado];
             const agora = new Date();
 
-            // Extrai a hora no formato local (HH:MM:SS)
-            const horaFormatada = agora.toLocaleTimeString('pt-BR');
+            if (tipo === 'in') {
+                estado.trabalhando = true;
+                estado.horaEntrada = agora.toISOString();
+                
+                registros.push({
+                    nome: usuarioSelecionado,
+                    evento: 'Clock In',
+                    hora: agora.toLocaleTimeString('pt-BR'),
+                    dataCompleta: agora.toISOString(),
+                    resumo: ''
+                });
+            } else if (tipo === 'out') {
+                const entrada = new Date(estado.horaEntrada);
+                const minutosTotais = Math.floor((agora - entrada) / 60000);
+                const horas = Math.floor(minutosTotais / 60);
+                const minutos = minutosTotais % 60;
 
-            // Prepara o texto para inserir na tela usando template literals
-            const mensagem = `<p><strong>${tipo}:</strong> ${horaFormatada}</p>`;
+                estado.trabalhando = false;
+                estado.horaEntrada = null;
 
-            // Adiciona o registro na tela de visualização
-            const divLog = document.getElementById('log-ponto');
-            divLog.innerHTML += mensagem;
+                registros.push({
+                    nome: usuarioSelecionado,
+                    evento: 'Clock Out',
+                    hora: agora.toLocaleTimeString('pt-BR'),
+                    dataCompleta: agora.toISOString(),
+                    resumo: `(Duração: ${horas}h ${minutos}m)`
+                });
+            }
+
+            localStorage.setItem('estadoUsuarios', JSON.stringify(estadoUsuarios));
+            localStorage.setItem('registrosPonto', JSON.stringify(registros));
+            
+            renderizarTela();
         }
-    </script>
 
+        function renderizarTela() {
+            const divFunc = document.getElementById('lista-funcionarios');
+            divFunc.innerHTML = '';
+            nomes.forEach(nome => {
+                const btn = document.createElement('button');
+                btn.className = `btn-func ${usuarioSelecionado === nome ? 'ativo' : ''}`;
+                btn.innerText = nome;
+                btn.onclick = () => selecionar(nome);
+                divFunc.appendChild(btn);
+            });
+
+            const btnIn = document.getElementById('btn-in');
+            const btnOut = document.getElementById('btn-out');
+            const statusMsg = document.getElementById('status-msg');
+
+            if (usuarioSelecionado) {
+                const estado = estadoUsuarios[usuarioSelecionado];
+                if (estado.trabalhando) {
+                    statusMsg.innerText = `Status: ${usuarioSelecionado} está em turno.`;
+                    btnIn.disabled = true;
+                    btnOut.disabled = false;
+                } else {
+                    statusMsg.innerText = `Status: ${usuarioSelecionado} fora do turno.`;
+                    btnIn.disabled = false;
+                    btnOut.disabled = true;
+                    btnOut.innerText = 'Clock Out'; 
+                }
+            } else {
+                statusMsg.innerText = 'Nenhum funcionário selecionado';
+                btnIn.disabled = true;
+                btnOut.disabled = true;
+                btnOut.innerText = 'Clock Out';
+            }
+
+            const divLog = document.getElementById('log-ponto');
+            divLog.innerHTML = '';
+            [...registros].reverse().forEach(reg => {
+                divLog.innerHTML += `<div class="registro-item">
+                    <strong>${reg.nome}</strong> | ${reg.evento} às ${reg.hora} ${reg.resumo}
+                </div>`;
+            });
+        }
+
+        function atualizarContador() {
+            if (usuarioSelecionado) {
+                const estado = estadoUsuarios[usuarioSelecionado];
+                if (estado.trabalhando && estado.horaEntrada) {
+                    const agora = new Date();
+                    const entrada = new Date(estado.horaEntrada);
+                    const minutosTotais = Math.floor((agora - entrada) / 60000);
+                    const horas = Math.floor(minutosTotais / 60);
+                    const minutos = minutosTotais % 60;
+                    
+                    document.getElementById('btn-out').innerText = `Clock Out (${horas}h ${minutos}m)`;
+                }
+            }
+        }
+
+        // Executa imediatamente para evitar um segundo em branco na tela
+        atualizarRelogio();
+        renderizarTela();
+        
+        // Agrupa as duas atualizações temporais no mesmo intervalo de 1 segundo
+        setInterval(() => {
+            atualizarRelogio();
+            atualizarContador();
+        }, 1000);
+
+    </script>
 </body>
 </html>
