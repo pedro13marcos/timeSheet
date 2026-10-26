@@ -238,25 +238,31 @@
                     <input type="hidden" id="edit-id-out" value="">
                     <label>Employee:</label>
                     <select id="man-nome"></select>
+                    
                     <label>Adjustment Type:</label>
                     <select id="man-tipo" onchange="atualizarFormularioManual()">
                         <option value="shift">Full Shift (In and Out)</option>
                         <option value="in">Clock In Only</option>
                         <option value="out">Clock Out Only</option>
                     </select>
-                    <label id="lbl-data1">Entry Date and Time:</label>
-                    <input type="datetime-local" id="man-data1">
+
+                    <div id="grupo-data1">
+                        <label id="lbl-data1">Entry Date and Time:</label>
+                        <input type="datetime-local" id="man-data1">
+                    </div>
+
                     <div id="grupo-data2">
-                        <label>Exit Date and Time:</label>
+                        <label id="lbl-data2">Exit Date and Time:</label>
                         <input type="datetime-local" id="man-data2">
                     </div>
+
                     <button class="btn-acao" id="btn-salvar-texto" onclick="salvarRegistroManual()">Save to Database</button>
                 </div>
             </div>
 
         </div>
         <footer>
-            Deploy: <strong>v1.5 (GitHub / Vercel Production)</strong> — Website developed by <strong>Pedro Marcos</strong> using <strong>vibe coding</strong> — Contact: <a href="mailto:pedromarcos212@gmail.com">pedromarcos212@gmail.com</a>
+            Deploy: <strong>v1.6 (GitHub / Vercel Production)</strong> — Website developed by <strong>Pedro Marcos</strong> using <strong>vibe coding</strong> — Contact: <a href="mailto:pedromarcos212@gmail.com">pedromarcos212@gmail.com</a>
         </footer>
     </div>
 
@@ -358,6 +364,7 @@
             if(id === 'relatorios' && (!usuariosSelecionadosRel.length || !usuariosSelecionadosRel.every(n => nomesAtuais.includes(n)))) usuariosSelecionadosRel = [...nomesAtuais];
             if(id === 'escala') inicializarSeletorEscala();
             if(id === 'config') renderizarInputsFechamento();
+            if(id === 'edicao') atualizarFormularioManual();
             renderizarTela();
         }
 
@@ -736,8 +743,6 @@
             }
         }
 
-        // --- RELATÓRIOS E CALENDÁRIO RESTAURADOS ---
-
         function mudarMes(direcao) {
             dataAtualCal.setMonth(dataAtualCal.getMonth() + direcao);
             montarCalendario();
@@ -1000,36 +1005,67 @@
             painel.innerHTML = htmlResultado;
         }
 
+        // ATUALIZADO: Mostra ou oculta dinamicamente os campos com base na seleção
         function atualizarFormularioManual() {
             const tipo = document.getElementById('man-tipo').value;
-            document.getElementById('grupo-data2').style.display = (tipo === 'shift') ? 'block' : 'none';
-            document.getElementById('lbl-data1').innerText = (tipo === 'shift') ? 'Entry Date and Time:' : (tipo === 'in' ? 'Clock In Date and Time:' : 'Clock Out Date and Time:');
+            const grupoData1 = document.getElementById('grupo-data1');
+            const grupoData2 = document.getElementById('grupo-data2');
+            const lblData1 = document.getElementById('lbl-data1');
+
+            if (tipo === 'shift') {
+                grupoData1.style.display = 'block';
+                grupoData2.style.display = 'block';
+                lblData1.innerText = 'Entry Date and Time:';
+            } else if (tipo === 'in') {
+                grupoData1.style.display = 'block';
+                grupoData2.style.display = 'none';
+                lblData1.innerText = 'Clock In Date and Time:';
+            } else if (tipo === 'out') {
+                grupoData1.style.display = 'none';
+                grupoData2.style.display = 'block';
+                // Usamos o campo data2 para guardar a data de saída quando for apenas 'out'
+            }
         }
 
         async function salvarRegistroManual() {
-            const idIn = document.getElementById('edit-id-in').value, idOut = document.getElementById('edit-id-out').value, nome = document.getElementById('man-nome').value;
-            const tipo = document.getElementById('man-tipo').value, valData1 = document.getElementById('man-data1').value, valData2 = document.getElementById('man-data2').value;
+            const idIn = document.getElementById('edit-id-in').value;
+            const idOut = document.getElementById('edit-id-out').value;
+            const nome = document.getElementById('man-nome').value;
+            const tipo = document.getElementById('man-tipo').value;
+            const valData1 = document.getElementById('man-data1').value;
+            const valData2 = document.getElementById('man-data2').value;
 
-            if (!valData1 || (tipo === 'shift' && !valData2)) return alert("Please fill in the required dates and times.");
+            if (tipo === 'shift' && (!valData1 || !valData2)) return alert("Please fill in both entry and exit dates and times.");
+            if (tipo === 'in' && !valData1) return alert("Please fill in the clock in date and time.");
+            if (tipo === 'out' && !valData2) return alert("Please fill in the clock out date and time.");
             
             try {
                 if(idIn) await apagarRegistroAPI(idIn);
                 if(idOut) await apagarRegistroAPI(idOut);
                 
-                const dt1 = new Date(valData1);
                 if (tipo === 'shift') {
-                    const dt2 = new Date(valData2);
+                    const dt1 = new Date(valData1), dt2 = new Date(valData2);
                     if (dt2 <= dt1) return alert("The exit time must be after the entry time.");
                     const minTotais = Math.floor((dt2 - dt1) / 60000);
                     await dispararRequisicaoAPI(nome, 'Clock In', dt1.toISOString(), dt1.toLocaleTimeString('en-US'), '(Manual)');
                     await dispararRequisicaoAPI(nome, 'Clock Out', dt2.toISOString(), dt2.toLocaleTimeString('en-US'), `(Manual: ${Math.floor(minTotais/60)}h ${minTotais%60}m)`);
-                } else if (tipo === 'in') { await dispararRequisicaoAPI(nome, 'Clock In', dt1.toISOString(), dt1.toLocaleTimeString('en-US'), '(Manual Adjustment)'); } 
-                else if (tipo === 'out') { await dispararRequisicaoAPI(nome, 'Clock Out', dt1.toISOString(), dt1.toLocaleTimeString('en-US'), '(Manual Adjustment)'); }
+                } else if (tipo === 'in') {
+                    const dt1 = new Date(valData1);
+                    await dispararRequisicaoAPI(nome, 'Clock In', dt1.toISOString(), dt1.toLocaleTimeString('en-US'), '(Manual Adjustment)');
+                } else if (tipo === 'out') {
+                    const dt2 = new Date(valData2);
+                    await dispararRequisicaoAPI(nome, 'Clock Out', dt2.toISOString(), dt2.toLocaleTimeString('en-US'), '(Manual Adjustment)');
+                }
 
                 alert("Record saved successfully!");
-                document.getElementById('edit-id-in').value = ''; document.getElementById('edit-id-out').value = ''; document.getElementById('btn-salvar-texto').innerText = "Save to Database";
-                document.getElementById('titulo-modo-edicao').innerText = "Manual Time Adjustment"; document.getElementById('man-data1').value = ''; document.getElementById('man-data2').value = '';
-                await carregarDadosGerais(true); mudarAba('ponto');
+                document.getElementById('edit-id-in').value = ''; 
+                document.getElementById('edit-id-out').value = ''; 
+                document.getElementById('btn-salvar-texto').innerText = "Save to Database";
+                document.getElementById('titulo-modo-edicao').innerText = "Manual Time Adjustment"; 
+                document.getElementById('man-data1').value = ''; 
+                document.getElementById('man-data2').value = '';
+                await carregarDadosGerais(true); 
+                mudarAba('ponto');
             } catch (erro) { alert("Error saving adjustments."); }
         }
 
