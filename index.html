@@ -217,6 +217,7 @@
                     <button class="btn-acao" onclick="gerarRelatorioCustomizado()">Generate Detailed Report</button>
                 </div>
                 <div id="painel-relatorio-custom" style="margin-top: 20px; display: none;"></div>
+                <div id="painel-relatorio-escalas" style="margin-top: 20px;"></div>
             </div>
 
             <div id="aba-config" class="aba">
@@ -277,7 +278,7 @@
 
         </div>
         <footer>
-            Deploy: <strong>v2.0 (GitHub / Vercel Production)</strong> — Website developed by <strong>Pedro Marcos</strong> using <strong>vibe coding</strong> — Contact: <a href="mailto:pedromarcos212@gmail.com">pedromarcos212@gmail.com</a>
+            Deploy: <strong>v2.1 (GitHub / Vercel Production)</strong> — Website developed by <strong>Pedro Marcos</strong> using <strong>vibe coding</strong> — Contact: <a href="mailto:pedromarcos212@gmail.com">pedromarcos212@gmail.com</a>
         </footer>
     </div>
 
@@ -376,7 +377,10 @@
             document.getElementById(`aba-${id}`).classList.add('ativa');
             const nomesAtuais = obterListaNomes();
             if(id === 'historico' && (!usuariosSelecionadosCal.length || !usuariosSelecionadosCal.every(n => nomesAtuais.includes(n)))) usuariosSelecionadosCal = [...nomesAtuais];
-            if(id === 'relatorios' && (!usuariosSelecionadosRel.length || !usuariosSelecionadosRel.every(n => nomesAtuais.includes(n)))) usuariosSelecionadosRel = [...nomesAtuais];
+            if(id === 'relatorios') {
+                if(!usuariosSelecionadosRel.length || !usuariosSelecionadosRel.every(n => nomesAtuais.includes(n))) usuariosSelecionadosRel = [...nomesAtuais];
+                renderizarRelatorioEscalas();
+            }
             if(id === 'escala') inicializarSeletorEscala();
             if(id === 'config') renderizarInputsFechamento();
             if(id === 'edicao') atualizarFormularioManual();
@@ -404,6 +408,7 @@
             try { const resEscala = await fetch('/api/escala'); if (resEscala.ok) escalas = await resEscala.json(); } catch (e) { escalas = []; }
             recalcularEstadosDoBanco();
             renderizarTela(reconstruirGrade);
+            if(document.getElementById('aba-relatorios').classList.contains('ativa')) renderizarRelatorioEscalas();
         }
 
         async function dispararRequisicaoAPI(nome, evento, dataIso, horaLocal, resumo) {
@@ -709,6 +714,7 @@
 
         async function salvarTabelaEscala() {
             let promessas = [];
+            const dataSegunda = document.getElementById('escala-data-inicio').value;
             document.querySelectorAll('#tabela-escala-grid tbody tr').forEach(tr => {
                 tr.querySelectorAll('.sel-in').forEach(selIn => {
                     const selFim = tr.querySelector(`.sel-fim[data-nome="${selIn.getAttribute('data-nome')}"][data-data="${selIn.getAttribute('data-data')}"]`), valIn = selIn.value, valFim = selFim ? selFim.value : '---';
@@ -717,6 +723,21 @@
             });
             try { 
                 await Promise.all(promessas); 
+                
+                // Registra o log de alteração de escala localmente para exibição nos relatórios
+                let historicoEscalas = JSON.parse(localStorage.getItem('historicoEscalasLog')) || [];
+                let semanaFormatada = formatarDataBR(dataSegunda);
+                let jaExisteLog = historicoEscalas.find(h => h.semana === semanaFormatada);
+                let agoraIso = new Date().toISOString();
+
+                if (jaExisteLog) {
+                    jaExisteLog.ultimaAtualizacao = agoraIso;
+                    jaExisteLog.vezesAtualizado = (jaExisteLog.vezesAtualizado || 1) + 1;
+                } else {
+                    historicoEscalas.push({ semana: semanaFormatada, primeiraCriacao: agoraIso, ultimaAtualizacao: agoraIso, vezesAtualizado: 1 });
+                }
+                localStorage.setItem('historicoEscalasLog', JSON.stringify(historicoEscalas));
+
                 alert("Schedule saved successfully to the cloud!"); 
                 await carregarDadosGerais(false); 
             } catch (e) { 
@@ -731,7 +752,6 @@
             }
             try {
                 const registroSw = await navigator.serviceWorker.ready;
-                // Exemplo de chave pública VAPID (substitua pela sua chave do servidor quando configurar)
                 const vapidPublicKey = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U'; 
                 const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
 
@@ -740,7 +760,6 @@
                     applicationServerKey: convertedVapidKey
                 });
 
-                // Envia a inscrição para a API backend salvar no banco
                 await fetch('/api/subscribe', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -915,6 +934,25 @@
                 celula.onclick = () => abrirDetalhesDiaMulti(chaveIso, turnosDoDia);
                 grid.appendChild(celula);
             }
+        }
+
+        function renderizarRelatorioEscalas() {
+            const painel = document.getElementById('painel-relatorio-escalas');
+            if (!painel) return;
+            let historicoEscalas = JSON.parse(localStorage.getItem('historicoEscalasLog')) || [];
+
+            let html = `<h3>📋 Roster & Schedule Updates Audit</h3>`;
+            if (historicoEscalas.length === 0) {
+                html += `<p style="font-size:14px; color:#666;">No schedule creation or update logs recorded yet.</p>`;
+            } else {
+                html += `<div class="form-manual" style="background:#e3f2fd;">` + 
+                historicoEscalas.map(h => `<div style="background:white; padding:10px; margin-bottom:8px; border-radius:4px; border-left:4px solid #2196F3;">
+                    <p style="margin:0 0 4px 0; font-weight:bold;">📅 Week starting on: ${h.semana}</p>
+                    <p style="margin:2px 0; font-size:13px;">✨ Created on: ${new Date(h.primeiraCriacao).toLocaleString('en-GB')}</p>
+                    <p style="margin:2px 0; font-size:13px;">🔄 Last update applied: ${new Date(h.ultimaAtualizacao).toLocaleString('en-GB')} <em>(${h.vezesAtualizado} revision${h.vezesAtualizado > 1 ? 's' : ''})</em></p>
+                </div>`).join('') + `</div>`;
+            }
+            painel.innerHTML = html;
         }
 
         function calcularTotaisSemana(dataIsoStr, nomeFunc) {

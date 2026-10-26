@@ -1,5 +1,36 @@
 import { sql } from '@vercel/postgres';
 
+const webpush = require('web-push');
+
+// Configure suas chaves VAPID (gere um par único para o seu projeto)
+webpush.setVapidDetails(
+  'mailto:pedromarcos212@gmail.com',
+  process.env.VAPID_PUBLIC_KEY,
+  process.env.VAPID_PRIVATE_KEY
+);
+
+// Exemplo dentro da rota POST /api/escala:
+// 1. Verifique se já existiam registros salvos para essa semana (data de início)
+// 2. Salve os novos turnos
+// 3. Dispare a notificação:
+
+const dataInicioSemana = req.body.data_turno; // ou a segunda-feira correspondente
+const jaExistia = verificouSeJaExistiaNoBanco(dataInicioSemana); 
+
+const mensagemTitulo = "Atualização de Escala";
+const mensagemTexto = jaExistia 
+  ? `O roster da semana começando pelo dia ${dataInicioSemana} foi alterado.` 
+  : `O roster da semana começando pelo dia ${dataInicioSemana} já está disponível.`;
+
+// Buscar todas as inscrições salvas no Vercel Postgres
+const assinaturasSalvas = await obterAssinaturasDoBanco(); 
+
+const payload = JSON.stringify({ title: mensagemTitulo, body: mensagemTexto });
+
+assinaturasSalvas.forEach(sub => {
+  webpush.sendNotification(sub, payload).catch(err => console.error("Erro ao enviar push:", err));
+});
+
 export default async function handler(req, res) {
     try {
         // 1. Cria a tabela automaticamente se ela não existir, 
@@ -42,4 +73,6 @@ export default async function handler(req, res) {
         console.error("Erro na API de escala:", error);
         return res.status(500).json({ erro: error.message });
     }
+
+    
 }
