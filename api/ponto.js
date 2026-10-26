@@ -17,10 +17,11 @@ export default async function handler(req, res) {
     
     if (req.method === 'GET') {
         try {
+            // Traz todos os registros dos últimos 6 meses exatos
             const { rows } = await sql`
                 SELECT * FROM registros_ponto 
-                ORDER BY data_completa DESC 
-                LIMIT 100;
+                WHERE data_completa >= NOW() - INTERVAL '6 months'
+                ORDER BY data_completa DESC;
             `;
             return res.status(200).json(rows);
         } catch (error) {

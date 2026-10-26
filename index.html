@@ -19,9 +19,10 @@
         #log-ponto { background: #f4f4f4; padding: 15px; border-radius: 5px; min-height: 100px; max-height: 400px; overflow-y: auto; }
         .registro-item { border-bottom: 1px solid #ddd; padding: 8px 0; }
         
-        /* Novos estilos para o relatório */
-        .btn-relatorio { background-color: #673AB7; color: white; border: none; padding: 12px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 20px; font-size: 16px; }
-        #painel-relatorio { background: #e3f2fd; padding: 15px; border-radius: 5px; margin-top: 20px; display: none; }
+        .area-relatorio { margin-top: 20px; display: flex; gap: 10px; }
+        select { padding: 10px; font-size: 16px; border-radius: 4px; border: 1px solid #ccc; flex: 1; }
+        .btn-relatorio { background-color: #673AB7; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        #painel-relatorio { background: #e3f2fd; padding: 15px; border-radius: 5px; margin-top: 15px; display: none; }
     </style>
 </head>
 <body>
@@ -38,10 +39,19 @@
         <button class="btn-ponto" id="btn-out" onclick="registrarPonto('out')" disabled>Clock Out</button>
     </div>
 
-    <h2>Histórico de Registros</h2>
+    <h2>Histórico de Registros (Nuvem)</h2>
     <div id="log-ponto">Carregando dados...</div>
 
-    <button class="btn-relatorio" onclick="gerarRelatorio()">Gerar Relatório de Horas</button>
+    <div class="area-relatorio">
+        <select id="filtro-tempo">
+            <option value="6_meses">Últimos 6 Meses (Geral)</option>
+            <option value="mensal">Mês Atual (Desde o dia 1)</option>
+            <option value="quinzenal">Últimos 14 dias (Bi-semanal)</option>
+            <option value="semanal">Últimos 7 dias (Semanal)</option>
+        </select>
+        <button class="btn-relatorio" onclick="gerarRelatorio()">Calcular</button>
+    </div>
+    
     <div id="painel-relatorio"></div>
 
     <script>
@@ -179,19 +189,40 @@
             }
         }
 
-        // Nova função matemática de agrupamento e soma
         function gerarRelatorio() {
+            const periodo = document.getElementById('filtro-tempo').value;
             const painel = document.getElementById('painel-relatorio');
             painel.style.display = 'block';
-            painel.innerHTML = '<h3>Total de Horas (Registros Carregados)</h3>';
+            
+            let titulo = '';
+            const agora = new Date();
+            let dataLimite = new Date();
+
+            // Configura a data limite com base na seleção
+            if (periodo === 'semanal') {
+                dataLimite.setDate(agora.getDate() - 7);
+                titulo = 'Últimos 7 dias';
+            } else if (periodo === 'quinzenal') {
+                dataLimite.setDate(agora.getDate() - 14);
+                titulo = 'Últimos 14 dias';
+            } else if (periodo === 'mensal') {
+                dataLimite.setDate(1); // Volta para o dia 1 do mês atual
+                dataLimite.setHours(0, 0, 0, 0);
+                titulo = 'Mês Atual';
+            } else {
+                dataLimite.setMonth(agora.getMonth() - 6);
+                titulo = 'Últimos 6 meses';
+            }
+
+            painel.innerHTML = `<h3>Horas Trabalhadas - ${titulo}</h3>`;
 
             const totais = {};
             nomes.forEach(nome => totais[nome] = 0); 
             const entradasPendentes = {}; 
 
-            // A API entrega os dados do mais recente para o mais antigo.
-            // Invertemos a lista para processar cronologicamente o emparelhamento.
-            const cronologico = [...registros].reverse();
+            // Filtra os dados carregados usando a data limite e inverte para ordem cronológica
+            const registrosFiltrados = registros.filter(reg => new Date(reg.data_completa) >= dataLimite);
+            const cronologico = [...registrosFiltrados].reverse();
 
             cronologico.forEach(reg => {
                 if (reg.evento === 'Clock In') {
@@ -203,15 +234,14 @@
                     const minutos = Math.floor((saida - entrada) / 60000);
                     totais[reg.nome] += minutos;
                     
-                    entradasPendentes[reg.nome] = null; // Limpa para aguardar o próximo turno
+                    entradasPendentes[reg.nome] = null;
                 }
             });
 
-            // Converte os minutos totais de volta para o formato de Horas e Minutos
             nomes.forEach(nome => {
                 const horas = Math.floor(totais[nome] / 60);
                 const minutos = totais[nome] % 60;
-                painel.innerHTML += `<p><strong>${nome}:</strong> ${horas}h ${minutos}m trabalhadas</p>`;
+                painel.innerHTML += `<p><strong>${nome}:</strong> ${horas}h ${minutos}m</p>`;
             });
         }
 
