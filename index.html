@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-   <meta charset="UTF-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Time & Schedule System</title>
     
@@ -11,6 +11,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="/icon-192.png">
+
     <style>
         body { margin: 0; display: flex; height: 100vh; font-family: sans-serif; background-color: #f9f9f9; }
         
@@ -24,6 +25,10 @@
         #sidebar.recolhido button { text-align: center; justify-content: center; }
         #sidebar.recolhido button span { display: none; }
         .btn-toggle { background: #1a252f !important; text-align: center; justify-content: center !important; font-weight: bold; margin-bottom: 10px; }
+        
+        /* Botão de Instalação PWA */
+        #btn-install-pwa { background: #27ae60 !important; font-weight: bold; display: none; }
+        #btn-install-pwa:hover { background: #2ed573 !important; }
 
         /* Central Area */
         #conteudo-principal { flex: 1; padding: 30px; overflow-y: auto; background: #fff; display: flex; flex-direction: column; justify-content: space-between; }
@@ -62,10 +67,11 @@
         
         .usuario-card { background: white; padding: 12px; margin-bottom: 8px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; border-left: 6px solid #ccc; }
 
-        /* Schedule Table */
+        /* Schedule Table & Uncovered Highlighting */
         .tabela-escala { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; text-align: center; }
-        .tabela-escala th, .tabela-escala td { border: 1px solid #ccc; padding: 6px; font-size: 13px; vertical-align: middle; }
+        .tabela-escala th, .tabela-escala td { border: 1px solid #ccc; padding: 6px; font-size: 13px; vertical-align: middle; transition: background-color 0.3s; }
         .tabela-escala th { background: #2c3e50; color: white; }
+        .tabela-escala th.th-uncovered { background: #d32f2f !important; color: #fff !important; }
         .tabela-escala select { width: 100%; text-align: center; padding: 4px; font-size: 12px; border: 1px solid #ccc; border-radius: 3px; background: white; margin-bottom: 2px; }
         .td-total-horas { background-color: #eef2f7; font-weight: bold; color: #2c3e50; font-size: 14px; }
 
@@ -102,6 +108,7 @@
     <!-- Collapsible Sidebar -->
     <div id="sidebar">
         <button class="btn-toggle" onclick="alternarSidebar()">☰ <span>Collapse</span></button>
+        <button id="btn-install-pwa" onclick="instalarPWA()">📲 <span>Install App</span></button>
         <h2>Time Web</h2>
         <button onclick="mudarAba('ponto')">⏰ <span>Clock In/Out</span></button>
         <button onclick="mudarAba('escala')">📋 <span>Create Schedule</span></button>
@@ -328,6 +335,7 @@
         
         let dataAtualCal = new Date();
         let estadoUsuarios = {};
+        let deferredPrompt = null;
 
         function salvarFuncionariosStorage() {
             localStorage.setItem('funcionariosConfig', JSON.stringify(funcionarios));
@@ -757,28 +765,76 @@
             atualizarTotaisTabelaEscala();
         }
 
+        function obterHoraCalculada(horarioStr, nomeDia) {
+            let str = (horarioStr || '---').toUpperCase();
+            if (str === '---' || str === 'OFF' || str === 'X') return null;
+
+            if (str.includes('C')) {
+                let fechamentoStr = fechamentosConfig[nomeDia] || '23:00';
+                if (fechamentoStr.includes('ND')) {
+                    return 24 + parseInt(fechamentoStr.split(':')[0]);
+                } else {
+                    return parseInt(fechamentoStr.split(':')[0]);
+                }
+            } else if (str.includes('ND')) {
+                return 24 + parseInt(str.split(':')[0]);
+            } else {
+                return parseInt(str.split(':')[0]);
+            }
+        }
+
         function calcularHorasShift(valIn, valFim, nomeDia) {
             if (!valIn || valIn === 'OFF' || valIn === 'X') return 0;
             let hIn = parseInt(valIn.split(':')[0]);
-            let hOut;
-
-            let hOutStr = (valFim || '---').toUpperCase();
-            if (hOutStr === '---') return 0;
-
-            if (hOutStr.includes('C')) {
-                let fechamentoStr = fechamentosConfig[nomeDia] || '23:00';
-                if (fechamentoStr.includes('ND')) {
-                    hOut = 24 + parseInt(fechamentoStr.split(':')[0]);
-                } else {
-                    hOut = parseInt(fechamentoStr.split(':')[0]);
-                }
-            } else if (hOutStr.includes('ND')) {
-                hOut = 24 + parseInt(hOutStr.split(':')[0]);
-            } else {
-                hOut = parseInt(hOutStr.split(':')[0]);
-                if (hOut < hIn) hOut += 24;
-            }
+            let hOut = obterHoraCalculada(valFim, nomeDia);
+            
+            if (hOut === null) return 0;
+            if (hOut < hIn) hOut += 24;
             return Math.max(0, hOut - hIn);
+        }
+
+        // Lógica para verificar a cobertura contínua de 12:00 até C em cada dia
+        function verificarCoberturaDia(dias, idx) {
+            const diaInfo = dias[idx];
+            const nomeDia = diaInfo.nomeDia;
+            const dataIso = diaInfo.dataIso;
+
+            let hFechamento = obterHoraCalculada('C', nomeDia) || 23;
+            if (hFechamento <= 12) return true; // Caso especial se fechar antes do meio dia
+
+            let intervalos = [];
+            const linhas = document.querySelectorAll('#tabela-escala-grid tbody tr');
+
+            linhas.forEach(tr => {
+                const selIn = tr.querySelector(`.sel-in[data-data="${dataIso}"]`);
+                const selFim = tr.querySelector(`.sel-fim[data-data="${dataIso}"]`);
+                if (selIn && selFim) {
+                    let vIn = selIn.value;
+                    let vFim = selFim.value;
+
+                    if (vIn !== 'OFF' && vIn !== 'X' && vIn !== '---') {
+                        let start = parseInt(vIn.split(':')[0]);
+                        let end = obterHoraCalculada(vFim, nomeDia);
+                        
+                        if (end !== null) {
+                            if (end < start) end += 24;
+                            if (end > start) {
+                                intervalos.push({ start, end });
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Verifica cada bloco de 1 hora entre 12:00 e hFechamento
+            for (let h = 12; h < hFechamento; h++) {
+                let coberto = intervalos.some(inv => inv.start <= h && inv.end >= h + 1);
+                if (!coberto) {
+                    return false; // Existe período não coberto!
+                }
+            }
+
+            return true; // Cobertura completa de 12:00 até Closing
         }
 
         function atualizarTotaisTabelaEscala() {
@@ -787,6 +843,7 @@
             if (!dataSegunda) return;
             const dias = obterDiasDaSemana(dataSegunda);
 
+            // 1. Recalcula o total de horas semanais por funcionário
             linhas.forEach(tr => {
                 let totalMinutos = 0;
                 const selectsIn = tr.querySelectorAll('.sel-in');
@@ -809,6 +866,21 @@
                     tdTotal.innerHTML = `${h}h${m > 0 ? ` ${m}m` : ''}`;
                 }
             });
+
+            // 2. Destaca colunas com falta de cobertura entre 12:00 e Closing ('C')
+            dias.forEach((d, idx) => {
+                let coberto = verificarCoberturaDia(dias, idx);
+                let th = document.querySelector(`#tabela-escala-grid th[data-day-idx="${idx}"]`);
+                if (th) {
+                    if (!coberto) {
+                        th.classList.add('th-uncovered');
+                        th.title = "⚠️ Warning: There is an uncovered period between 12:00 PM and Closing ('C')!";
+                    } else {
+                        th.classList.remove('th-uncovered');
+                        th.title = "";
+                    }
+                }
+            });
         }
 
         function carregarTabelaEscala() {
@@ -821,8 +893,8 @@
             if(!grid) return;
 
             let html = `<thead><tr><th>Employee</th>`;
-            dias.forEach(d => {
-                html += `<th>${d.nomeDia.slice(0,3)}<br>${d.dataFormatada}</th>`;
+            dias.forEach((d, idx) => {
+                html += `<th data-day-idx="${idx}">${d.nomeDia.slice(0,3)}<br>${d.dataFormatada}</th>`;
             });
             html += `<th>Total Hours</th></tr></thead><tbody>`;
 
@@ -1138,7 +1210,6 @@
                 const h = Math.floor(minutosTotais / 60);
                 const m = minutosTotais % 60;
 
-                // Registros excluídos do funcionário no período
                 const excluidosFunc = registrosExcluidos.filter(r => {
                     if (r.nome !== nome) return false;
                     let dtDel = new Date(r.deleted_at || r.data_completa);
@@ -1162,7 +1233,6 @@
                     });
                 }
 
-                // Seção de Exclusões por Funcionário
                 if (excluidosFunc.length > 0) {
                     htmlResultado += `
                         <div class="deleted-box">
@@ -1522,7 +1592,6 @@
                 painel.innerHTML += `<p><strong>${nome}:</strong> ${horas}h ${minutos}m</p>`;
             });
 
-            // Seção de Exclusões Gerais no Período Rápido
             const excluidosNoPeriodo = registrosExcluidos.filter(r => {
                 let dtDel = new Date(r.deleted_at || r.data_completa);
                 return dtDel >= dataLimite;
@@ -1612,6 +1681,35 @@
             }
         }
 
+        // PWA Install Event Handler
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const btnInstall = document.getElementById('btn-install-pwa');
+            if (btnInstall) btnInstall.style.display = 'flex';
+        });
+
+        async function instalarPWA() {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                console.log('User accepted the PWA install prompt');
+            }
+            deferredPrompt = null;
+            const btnInstall = document.getElementById('btn-install-pwa');
+            if (btnInstall) btnInstall.style.display = 'none';
+        }
+
+        // Registro do Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('Service Worker registered successfully:', reg.scope))
+                    .catch(err => console.error('Error registering Service Worker:', err));
+            });
+        }
+
         // Atualização contínua do relógio a cada 1 segundo
         setInterval(() => {
             atualizarRelogio();
@@ -1625,16 +1723,6 @@
 
         atualizarRelogio();
         carregarDadosGerais(true);
-
-        // Registro do Service Worker para suporte a PWA
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('Service Worker registrado com sucesso:', reg.scope))
-                    .catch(err => console.error('Erro ao registrar Service Worker:', err));
-            });
-        }
-
 
     </script>
 </body>
