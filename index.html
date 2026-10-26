@@ -43,7 +43,7 @@
         .btn-relatorio { background-color: #673AB7; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         #painel-relatorio { background: #e3f2fd; padding: 15px; border-radius: 5px; margin-top: 15px; display: none; }
         
-        /* Formulários Manuais e Relatório Customizado */
+        /* Formulários Manuais */
         .form-manual { background: #f4f4f4; padding: 20px; border-radius: 5px; }
         .form-manual label { display: block; margin-top: 15px; font-weight: bold; color: #333; }
         .form-manual input, .form-manual select { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
@@ -53,13 +53,18 @@
         .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
         .cal-day-name { font-weight: bold; background: #e0e0e0; padding: 10px; border-radius: 4px; }
-        .cal-day { background: #f1f1f1; min-height: 80px; padding: 5px; border-radius: 4px; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
-        .cal-day:hover { background: #e4e4e4; }
-        .cal-day.trabalhado { background: #c8e6c9; border: 1px solid #81c784; }
+        .cal-day { background: #f1f1f1; min-height: 80px; padding: 5px; border-radius: 4px; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; position: relative; transition: transform 0.1s; }
+        .cal-day:hover { filter: brightness(0.95); }
         .cal-day.outro-mes { opacity: 0.3; }
-        .cal-day-num { font-weight: bold; font-size: 14px; }
-        .cal-badge { font-size: 11px; background: #2e7d32; color: white; padding: 2px 4px; border-radius: 3px; margin-top: 2px; }
+        .cal-day-num { font-weight: bold; font-size: 14px; z-index: 2; }
+        .cal-badges-container { display: flex; flex-direction: column; gap: 2px; z-index: 2; }
+        .cal-badge { font-size: 10px; color: white; padding: 1px 3px; border-radius: 3px; font-weight: bold; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         
+        /* Legenda de Cores do Calendário */
+        .legenda-cores { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; font-size: 14px; align-items: center; }
+        .legenda-item { display: flex; align-items: center; gap: 5px; }
+        .legenda-cor { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+
         /* Modal de Detalhes do Dia */
         #modal-dia { display: none; background: #fff3e0; border: 1px solid #ffb74d; padding: 15px; border-radius: 5px; margin-top: 20px; }
         .btn-acao-mini { background: #d32f2f; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; }
@@ -110,12 +115,21 @@
             <div id="painel-relatorio"></div>
         </div>
 
-        <!-- ABA 2: Histórico e Calendário -->
+        <!-- ABA 2: Histórico e Calendário Multi-Usuário -->
         <div id="aba-historico" class="aba">
             <h1>Calendário de Turnos</h1>
+            <p>Selecione um ou mais funcionários para visualizar os turnos combinados no calendário.</p>
             
-            <h3>Selecione o Funcionário:</h3>
+            <h3>Funcionários (Clique para selecionar/desselecionar):</h3>
             <div class="funcionarios" id="lista-funcionarios-cal"></div>
+
+            <div class="legenda-cores">
+                <strong>Legenda:</strong>
+                <span class="legenda-item"><span class="legenda-cor" style="background:#2196F3"></span> Pedro</span>
+                <span class="legenda-item"><span class="legenda-cor" style="background:#9c27b0"></span> Max</span>
+                <span class="legenda-item"><span class="legenda-cor" style="background:#ff9800"></span> Carlos</span>
+                <span class="legenda-item"><span class="legenda-cor" style="background:#009688"></span> Sanny</span>
+            </div>
 
             <div class="cal-header">
                 <button onclick="mudarMes(-1)">◀ Mês Anterior</button>
@@ -131,20 +145,14 @@
             </div>
         </div>
 
-        <!-- ABA 3: Relatórios Customizados por Data/Hora -->
+        <!-- ABA 3: Relatórios Customizados por Múltiplos Funcionários -->
         <div id="aba-relatorios" class="aba">
             <h1>Relatórios por Período Específico</h1>
-            <p>Selecione um funcionário (ou todos) e defina o intervalo exato de data e horário para auditar turnos e horas trabalhadas.</p>
+            <p>Selecione um ou mais funcionários e defina o intervalo exato de data e horário.</p>
             
             <div class="form-manual">
-                <label>Funcionário:</label>
-                <select id="rel-custom-nome">
-                    <option value="TODOS">Todos os Funcionários</option>
-                    <option value="Pedro">Pedro</option>
-                    <option value="Max">Max</option>
-                    <option value="Carlos">Carlos</option>
-                    <option value="Sanny">Sanny</option>
-                </select>
+                <label>Funcionários (Múltipla seleção):</label>
+                <div class="funcionarios" id="lista-funcionarios-rel" style="margin-top: 5px;"></div>
 
                 <label>Data e Hora de Início:</label>
                 <input type="datetime-local" id="rel-custom-inicio">
@@ -197,8 +205,18 @@
 
     <script>
         const nomes = ['Pedro', 'Max', 'Carlos', 'Sanny'];
+        
+        // Cores dedicadas para cada funcionário no calendário
+        const coresFuncionarios = {
+            'Pedro': '#2196F3',  // Azul
+            'Max': '#9c27b0',    // Roxo
+            'Carlos': '#ff9800', // Laranja
+            'Sanny': '#009688'   // Verde Água
+        };
+
         let usuarioSelecionado = null;
-        let usuarioSelecionadoCal = null;
+        let usuariosSelecionadosCal = []; // Múltiplos no calendário
+        let usuariosSelecionadosRel = []; // Múltiplos nos relatórios
         let registros = [];
         
         let dataAtualCal = new Date();
@@ -215,8 +233,13 @@
         function mudarAba(id) {
             document.querySelectorAll('.aba').forEach(aba => aba.classList.remove('ativa'));
             document.getElementById(`aba-${id}`).classList.add('ativa');
-            if(id === 'historico' && !usuarioSelecionadoCal) {
-                usuarioSelecionadoCal = nomes[0];
+            
+            // Inicializa seleções padrão se estiverem vazias ao entrar nas abas
+            if(id === 'historico' && usuariosSelecionadosCal.length === 0) {
+                usuariosSelecionadosCal = [nomes[0]];
+            }
+            if(id === 'relatorios' && usuariosSelecionadosRel.length === 0) {
+                usuariosSelecionadosRel = [...nomes]; // Todos selecionados por padrão
             }
             renderizarTela();
         }
@@ -232,8 +255,27 @@
             atualizarContador();
         }
 
-        function selecionarCal(nome) {
-            usuarioSelecionadoCal = nome;
+        function toggleUsuarioCal(nome) {
+            const index = usuariosSelecionadosCal.indexOf(nome);
+            if (index > -1) {
+                if (usuariosSelecionadosCal.length > 1) { // Evita desmarcar todos
+                    usuariosSelecionadosCal.splice(index, 1);
+                }
+            } else {
+                usuariosSelecionadosCal.push(nome);
+            }
+            renderizarTela();
+        }
+
+        function toggleUsuarioRel(nome) {
+            const index = usuariosSelecionadosRel.indexOf(nome);
+            if (index > -1) {
+                if (usuariosSelecionadosRel.length > 1) {
+                    usuariosSelecionadosRel.splice(index, 1);
+                }
+            } else {
+                usuariosSelecionadosRel.push(nome);
+            }
             renderizarTela();
         }
 
@@ -293,6 +335,7 @@
         }
 
         function renderizarTela() {
+            // Home: Funcionários (Seleção única)
             const divFunc = document.getElementById('lista-funcionarios');
             if (divFunc) {
                 divFunc.innerHTML = '';
@@ -305,15 +348,34 @@
                 });
             }
 
+            // Calendário: Funcionários (Múltipla seleção)
             const divFuncCal = document.getElementById('lista-funcionarios-cal');
             if (divFuncCal) {
                 divFuncCal.innerHTML = '';
                 nomes.forEach(nome => {
+                    const ativo = usuariosSelecionadosCal.includes(nome);
                     const btn = document.createElement('button');
-                    btn.className = `btn-func ${usuarioSelecionadoCal === nome ? 'ativo' : ''}`;
+                    btn.className = `btn-func ${ativo ? 'ativo' : ''}`;
+                    btn.style.borderColor = coresFuncionarios[nome];
+                    if(ativo) btn.style.backgroundColor = coresFuncionarios[nome];
                     btn.innerText = nome;
-                    btn.onclick = () => { selecionarCal(nome); montarCalendario(); };
+                    btn.onclick = () => toggleUsuarioCal(nome);
                     divFuncCal.appendChild(btn);
+                });
+            }
+
+            // Relatórios: Funcionários (Múltipla seleção)
+            const divFuncRel = document.getElementById('lista-funcionarios-rel');
+            if (divFuncRel) {
+                divFuncRel.innerHTML = '';
+                nomes.forEach(nome => {
+                    const ativo = usuariosSelecionadosRel.includes(nome);
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = `btn-func ${ativo ? 'ativo' : ''}`;
+                    btn.innerText = nome;
+                    btn.onclick = () => toggleUsuarioRel(nome);
+                    divFuncRel.appendChild(btn);
                 });
             }
 
@@ -339,7 +401,7 @@
                 if(btnOut) btnOut.disabled = true;
             }
 
-            // Histórico recente limitado estritamente aos últimos 6 registros
+            // Histórico recente (Últimos 6)
             const divLog = document.getElementById('log-ponto');
             if (divLog) {
                 divLog.innerHTML = '';
@@ -355,7 +417,7 @@
                 }
             }
 
-            if(usuarioSelecionadoCal) {
+            if(document.getElementById('aba-historico').classList.contains('ativa')) {
                 montarCalendario();
             }
         }
@@ -375,9 +437,8 @@
             }
         }
 
-        // --- RELATÓRIO CUSTOMIZADO POR PERÍODO ESPECÍFICO ---
+        // --- RELATÓRIO CUSTOMIZADO PARA MÚLTIPLOS FUNCIONÁRIOS ---
         function gerarRelatorioCustomizado() {
-            const nomeEscolhido = document.getElementById('rel-custom-nome').value;
             const strInicio = document.getElementById('rel-custom-inicio').value;
             const strFim = document.getElementById('rel-custom-fim').value;
             const painel = document.getElementById('painel-relatorio-custom');
@@ -385,6 +446,11 @@
 
             if (!strInicio || !strFim) {
                 alert("Por favor, preencha a data e o horário de início e fim.");
+                return;
+            }
+
+            if (usuariosSelecionadosRel.length === 0) {
+                alert("Selecione pelo menos um funcionário.");
                 return;
             }
 
@@ -396,10 +462,9 @@
                 return;
             }
 
-            let nomesAlvo = nomeEscolhido === 'TODOS' ? nomes : [nomeEscolhido];
             let htmlResultado = `<h3>Relatório de ${dtInicio.toLocaleString('pt-BR')} até ${dtFim.toLocaleString('pt-BR')}</h3>`;
 
-            nomesAlvo.forEach(nome => {
+            usuariosSelecionadosRel.forEach(nome => {
                 const regsFunc = registros.filter(r => r.nome === nome).sort((a,b) => new Date(a.data_completa) - new Date(b.data_completa));
                 
                 let minutosTotais = 0;
@@ -413,7 +478,6 @@
                         let tIn = new Date(entradaPendente.data_completa);
                         let tOut = new Date(reg.data_completa);
 
-                        // Se o turno intercepta o intervalo personalizado escolhido
                         if (tIn <= dtFim && tOut >= dtInicio) {
                             let duracaoMin = Math.floor((tOut - tIn) / 60000);
                             minutosTotais += duracaoMin;
@@ -452,7 +516,7 @@
             painel.innerHTML = htmlResultado;
         }
 
-        // --- CALENDÁRIO ---
+        // --- CALENDÁRIO COM CORES MÚLTIPLAS E GRADIENTE ---
         function formatarDataLocal(data) {
             const y = data.getFullYear();
             const m = String(data.getMonth() + 1).padStart(2, '0');
@@ -465,45 +529,50 @@
             montarCalendario();
         }
 
-        function processarTurnosFuncionario(nomeFunc) {
-            const regsFunc = registros.filter(r => r.nome === nomeFunc).sort((a,b) => new Date(a.data_completa) - new Date(b.data_completa));
-            let mapaDias = {}; 
-            let entradaPendente = null;
+        function mapearTurnosMultiplos() {
+            // Mapeia por dia ('YYYY-MM-DD') quais funcionários trabalharam e seus turnos
+            let mapaGeral = {}; // { 'YYYY-MM-DD': { 'Pedro': [turns], 'Max': [turns] } }
 
-            regsFunc.forEach(reg => {
-                if (reg.evento === 'Clock In') {
-                    entradaPendente = reg;
-                } else if (reg.evento === 'Clock Out' && entradaPendente) {
-                    let dtIn = new Date(entradaPendente.data_completa);
-                    let dtOut = new Date(reg.data_completa);
+            usuariosSelecionadosCal.forEach(nome => {
+                const regsFunc = registros.filter(r => r.nome === nome).sort((a,b) => new Date(a.data_completa) - new Date(b.data_completa));
+                let entradaPendente = null;
 
-                    let cursor = new Date(dtIn.getFullYear(), dtIn.getMonth(), dtIn.getDate());
-                    let fim = new Date(dtOut.getFullYear(), dtOut.getMonth(), dtOut.getDate());
+                regsFunc.forEach(reg => {
+                    if (reg.evento === 'Clock In') {
+                        entradaPendente = reg;
+                    } else if (reg.evento === 'Clock Out' && entradaPendente) {
+                        let dtIn = new Date(entradaPendente.data_completa);
+                        let dtOut = new Date(reg.data_completa);
 
-                    while (cursor <= fim) {
-                        let chaveDia = formatarDataLocal(cursor);
-                        if (!mapaDias[chaveDia]) mapaDias[chaveDia] = [];
+                        let cursor = new Date(dtIn.getFullYear(), dtIn.getMonth(), dtIn.getDate());
+                        let fim = new Date(dtOut.getFullYear(), dtOut.getMonth(), dtOut.getDate());
 
-                        mapaDias[chaveDia].push({
-                            idIn: entradaPendente.id,
-                            idOut: reg.id,
-                            inTime: entradaPendente,
-                            outTime: reg
-                        });
+                        while (cursor <= fim) {
+                            let chaveDia = formatarDataLocal(cursor);
+                            if (!mapaGeral[chaveDia]) mapaGeral[chaveDia] = {};
+                            if (!mapaGeral[chaveDia][nome]) mapaGeral[chaveDia][nome] = [];
 
-                        cursor.setDate(cursor.getDate() + 1);
+                            mapaGeral[chaveDia][nome].push({
+                                idIn: entradaPendente.id,
+                                idOut: reg.id,
+                                inTime: entradaPendente,
+                                outTime: reg
+                            });
+
+                            cursor.setDate(cursor.getDate() + 1);
+                        }
+                        entradaPendente = null;
                     }
-                    entradaPendente = null;
-                }
+                });
             });
 
-            return mapaDias;
+            return mapaGeral;
         }
 
         function montarCalendario() {
             const grid = document.getElementById('calendario-grid');
             const lblMesAno = document.getElementById('cal-mes-ano');
-            if (!grid || !usuarioSelecionadoCal) return;
+            if (!grid) return;
 
             grid.innerHTML = '';
             const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -519,7 +588,7 @@
             const ultimoDiaMes = new Date(ano, mes + 1, 0).getDate();
             const ultimoDiaMesAnterior = new Date(ano, mes, 0).getDate();
 
-            const mapaTrabalho = processarTurnosFuncionario(usuarioSelecionadoCal);
+            const mapaGeral = mapearTurnosMultiplos();
 
             for (let i = primeiroDiaMes - 1; i >= 0; i--) {
                 let diaNum = ultimoDiaMesAnterior - i;
@@ -531,44 +600,73 @@
                 let diaStr = String(dia).padStart(2, '0');
                 let chaveIso = `${ano}-${mesStr}-${diaStr}`;
 
-                let dadosDia = mapaTrabalho[chaveIso];
-                let classeTrabalhado = dadosDia ? 'trabalhado' : '';
-                let htmlBadge = dadosDia ? `<div class="cal-badge">${dadosDia.length} turno(s)</div>` : '';
+                let turnosDoDia = mapaGeral[chaveIso] || {}; // { 'Pedro': [...], 'Max': [...] }
+                let funcionariosNoDia = Object.keys(turnosDoDia);
 
                 let celula = document.createElement('div');
-                celula.className = `cal-day ${classeTrabalhado}`;
-                celula.innerHTML = `<span class="cal-day-num">${dia}</span>${htmlBadge}`;
-                celula.onclick = () => abrirDetalhesDia(chaveIso, dadosDia);
+                celula.className = `cal-day`;
+
+                // Aplicação de cores e gradientes conforme quantidade de funcionários no dia
+                if (funcionariosNoDia.length === 1) {
+                    let func = funcionariosNoDia[0];
+                    celula.style.background = coresFuncionarios[func];
+                    celula.style.color = 'white';
+                } else if (funcionariosNoDia.length > 1) {
+                    // Mais de um funcionário: constrói um gradiente linear dividido proporcionalmente
+                    let qtd = funcionariosNoDia.length;
+                    let stops = [];
+                    funcionariosNoDia.forEach((func, idx) => {
+                        let cor = coresFuncionarios[func] || '#ccc';
+                        let inicio = (idx * (100 / qtd)).toFixed(1);
+                        let fim = ((idx + 1) * (100 / qtd)).toFixed(1);
+                        stops.push(`${cor} ${inicio}% ${fim}%`);
+                    });
+                    celula.style.background = `linear-gradient(135deg, ${stops.join(', ')})`;
+                    celula.style.color = 'white';
+                }
+
+                let htmlBadges = '<div class="cal-badges-container">';
+                funcionariosNoDia.forEach(func => {
+                    htmlBadges += `<div class="cal-badge" style="background: rgba(0,0,0,0.3);">${func}</div>`;
+                });
+                htmlBadges += '</div>';
+
+                celula.innerHTML = `<span class="cal-day-num">${dia}</span>${htmlBadges}`;
+                celula.onclick = () => abrirDetalhesDiaMulti(chaveIso, turnosDoDia);
                 grid.appendChild(celula);
             }
         }
 
-        function abrirDetalhesDia(dataIso, dadosDia) {
+        function abrirDetalhesDiaMulti(dataIso, turnosDoDia) {
             const modal = document.getElementById('modal-dia');
             const titulo = document.getElementById('modal-titulo');
             const conteudo = document.getElementById('modal-conteudo');
             modal.style.display = 'block';
-            titulo.innerText = `Turnos em ${dataIso.split('-').reverse().join('/')} (${usuarioSelecionadoCal})`;
+            titulo.innerText = `Turnos em ${dataIso.split('-').reverse().join('/')}`;
 
-            if (!dadosDia || dadosDia.length === 0) {
-                conteudo.innerHTML = `<p>Nenhum registo de turno neste dia.</p>`;
+            const funcionariosPresentes = Object.keys(turnosDoDia);
+            if (funcionariosPresentes.length === 0) {
+                conteudo.innerHTML = `<p>Nenhum registo de turno neste dia para os funcionários selecionados.</p>`;
                 return;
             }
 
             conteudo.innerHTML = '';
-            dadosDia.forEach((item, index) => {
-                let txtIn = item.inTime ? `${item.inTime.hora_local} (${new Date(item.inTime.data_completa).toLocaleDateString()})` : 'Parcial';
-                let txtOut = item.outTime ? `${item.outTime.hora_local} (${new Date(item.outTime.data_completa).toLocaleDateString()})` : 'Em andamento';
-                
-                conteudo.innerHTML += `
-                    <div style="background:white; padding:10px; margin-bottom:8px; border-radius:4px;">
-                        <p><strong>Turno #${index+1}</strong></p>
-                        <p>🟢 Início: ${txtIn}</p>
-                        <p>🔴 Fim: ${txtOut}</p>
-                        <button class="btn-editar-mini" onclick="prepararEdicao('${item.idIn}', '${item.idOut}', '${usuarioSelecionadoCal}')">✏️ Editar Turno</button>
-                        <button class="btn-acao-mini" onclick="excluirTurno('${item.idIn}', '${item.idOut}')">🗑️ Apagar</button>
-                    </div>
-                `;
+            funcionariosPresentes.forEach(func => {
+                conteudo.innerHTML += `<p style="margin-top:10px; font-weight:bold; color:${coresFuncionarios[func]}">👤 ${func}</p>`;
+                turnosDoDia[func].forEach((item, index) => {
+                    let txtIn = item.inTime ? `${item.inTime.hora_local} (${new Date(item.inTime.data_completa).toLocaleDateString()})` : 'Parcial';
+                    let txtOut = item.outTime ? `${item.outTime.hora_local} (${new Date(item.outTime.data_completa).toLocaleDateString()})` : 'Em andamento';
+                    
+                    conteudo.innerHTML += `
+                        <div style="background:white; padding:8px; margin-bottom:5px; border-radius:4px; border-left: 4px solid ${coresFuncionarios[func]}">
+                            <p>Turno #${index+1}</p>
+                            <p style="font-size:13px;">🟢 Início: ${txtIn}</p>
+                            <p style="font-size:13px;">🔴 Fim: ${txtOut}</p>
+                            <button class="btn-editar-mini" onclick="prepararEdicao('${item.idIn}', '${item.idOut}', '${func}')">✏️ Editar</button>
+                            <button class="btn-acao-mini" onclick="excluirTurno('${item.idIn}', '${item.idOut}')">🗑️ Apagar</button>
+                        </div>
+                    `;
+                });
             });
         }
 
