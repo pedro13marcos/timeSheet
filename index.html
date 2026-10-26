@@ -212,7 +212,6 @@
     </div>
 
     <script>
-        // Gestão de Funcionários Dinâmicos guardada no localStorage
         let funcionarios = JSON.parse(localStorage.getItem('funcionariosConfig')) || [
             { nome: 'Pedro', cor: '#2196F3' },
             { nome: 'Max', cor: '#9c27b0' },
@@ -226,7 +225,7 @@
         let registros = [];
         
         let dataAtualCal = new Date();
-        let estadoUsuarios = JSON.parse(localStorage.getItem('estadoUsuarios')) || {};
+        let estadoUsuarios = {};
 
         function salvarFuncionariosStorage() {
             localStorage.setItem('funcionariosConfig', JSON.stringify(funcionarios));
@@ -241,10 +240,30 @@
             return func ? func.cor : '#607d8b';
         }
 
-        // Inicializa estado dos utilizadores se necessário
-        obterListaNomes().forEach(nome => {
-            if (!estadoUsuarios[nome]) estadoUsuarios[nome] = { trabalhando: false, horaEntrada: null };
-        });
+        // Calcula o estado atual (trabalhando ou não) diretamente dos registros do banco
+        function recalcularEstadosDoBanco() {
+            const nomesAtuais = obterListaNomes();
+            nomesAtuais.forEach(nome => {
+                estadoUsuarios[nome] = { trabalhando: false, horaEntrada: null };
+            });
+
+            // Como os registros vêm ordenados do mais recente para o mais antigo,
+            // o primeiro evento encontrado para cada usuário define o seu estado atual.
+            const ultimosEventos = {};
+            registros.forEach(reg => {
+                if (!ultimosEventos[reg.nome]) {
+                    ultimosEventos[reg.nome] = reg;
+                }
+            });
+
+            Object.keys(ultimosEventos).forEach(nome => {
+                const reg = ultimosEventos[nome];
+                if (reg.evento === 'Clock In' && estadoUsuarios[nome]) {
+                    estadoUsuarios[nome].trabalhando = true;
+                    estadoUsuarios[nome].horaEntrada = reg.data_completa;
+                }
+            });
+        }
 
         function alternarSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -301,6 +320,7 @@
             try {
                 const resposta = await fetch('/api/ponto');
                 registros = await resposta.json();
+                recalcularEstadosDoBanco(); // Atualiza o estado global com base na base de dados
                 renderizarTela();
             } catch (erro) {
                 const divLog = document.getElementById('log-ponto');
@@ -330,22 +350,23 @@
 
             try {
                 if (tipo === 'in') {
-                    estado.trabalhando = true;
-                    estado.horaEntrada = dataIso;
+                    // Impede duplo clock in se já estiver trabalhando (redundância de segurança)
+                    if (estado && estado.trabalhando) {
+                        alert("Este funcionário já está em turno.");
+                        return;
+                    }
                     await dispararRequisicaoAPI(usuarioSelecionado, 'Clock In', dataIso, horaLocal, '');
                 } else if (tipo === 'out') {
-                    const entrada = new Date(estado.horaEntrada);
+                    // Calcula a duração com base na hora de entrada registada no banco
+                    const entradaIso = estado.horaEntrada || dataIso;
+                    const entrada = new Date(entradaIso);
                     const minutosTotais = Math.floor((agora - entrada) / 60000);
                     const horas = Math.floor(minutosTotais / 60);
                     const minutos = minutosTotais % 60;
                     
-                    estado.trabalhando = false;
-                    estado.horaEntrada = null;
                     await dispararRequisicaoAPI(usuarioSelecionado, 'Clock Out', dataIso, horaLocal, `(Duração: ${horas}h ${minutos}m)`);
                 }
 
-                localStorage.setItem('estadoUsuarios', JSON.stringify(estadoUsuarios));
-                renderizarTela();
                 await carregarRegistros();
             } catch (erro) {
                 alert("Erro ao salvar no servidor.");
@@ -355,7 +376,7 @@
         function renderizarTela() {
             const nomesAtuais = obterListaNomes();
 
-            // Home: Funcionários (Indicação visual caso esteja em turno ativo)
+            // Home: Funcionários (Indicação colorida persistente para quem está em turno)
             const divFunc = document.getElementById('lista-funcionarios');
             if (divFunc) {
                 divFunc.innerHTML = '';
@@ -368,10 +389,11 @@
                     
                     if (usuarioSelecionado === nome) {
                         btn.style.border = '3px solid #000';
+                    } else {
+                        btn.style.border = '1px solid #ccc';
                     }
                     
                     if (estado.trabalhando) {
-                        // Se estiver em turno ativo, pinta o botão com a cor escolhida e texto branco
                         btn.style.backgroundColor = corFunc;
                         btn.style.color = 'white';
                     } else {
@@ -428,6 +450,9 @@
                     if(ativo) {
                         btn.style.backgroundColor = obterCorFuncionario(nome);
                         btn.style.color = 'white';
+                    } else {
+                        btn.style.backgroundColor = '#fff';
+                        btn.style.color = '#333';
                     }
                     btn.innerText = nome;
                     btn.onclick = () => toggleUsuarioRel(nome);
@@ -446,7 +471,6 @@
                 if(nomesAtuais.includes(valAntigo)) selManNome.value = valAntigo;
             }
 
-            // Renderizar lista de configurações
             renderizarConfigUsuarios();
 
             const btnIn = document.getElementById('btn-in');
@@ -454,11 +478,11 @@
             const statusMsg = document.getElementById('status-msg');
 
             if (usuarioSelecionado && btnIn && btnOut) {
-                const estado = estadoUsuarios[usuarioSelecionado];
-                if (estado && estado.trabalhando) {
+                const estado = estadoUsuarios[usuarioSelecionado] || { trabalhando: false };
+                if (estado.trabalhando) {
                     statusMsg.innerText = `Status: ${usuarioSelecionado} está em turno.`;
-                    btnIn.disabled = true;
-                    btnOut.disabled = false;
+                    btnIn.disabled = true;  // Impede novo clock in em qualquer terminal
+                    btnOut.disabled = false; // Permite clock out em qualquer terminal
                 } else {
                     statusMsg.innerText = `Status: ${usuarioSelecionado} fora do turno.`;
                     btnIn.disabled = false;
@@ -532,14 +556,12 @@
                 return;
             }
 
-            // Validação de cor única (não repetível)
             const corExistente = funcionarios.find((f, idx) => f.cor.toLowerCase() === corInput.toLowerCase() && idx !== index);
             if(corExistente) {
                 alert(`Esta cor já está a ser utilizada pelo funcionário ${corExistente.nome}. Por favor, escolha uma cor única.`);
                 return;
             }
 
-            // Validação de nome único
             const nomeExistente = funcionarios.find((f, idx) => f.nome.toLowerCase() === nomeInput.toLowerCase() && idx !== index);
             if(nomeExistente) {
                 alert("Já existe um funcionário com este nome.");
@@ -547,16 +569,8 @@
             }
 
             if(index === -1) {
-                // Adicionar novo
                 funcionarios.push({ nome: nomeInput, cor: corInput });
-                estadoUsuarios[nomeInput] = { trabalhando: false, horaEntrada: null };
             } else {
-                // Editar existente
-                const nomeAntigo = funcionarios[index].nome;
-                if(nomeAntigo !== nomeInput) {
-                    estadoUsuarios[nomeInput] = estadoUsuarios[nomeAntigo] || { trabalhando: false, horaEntrada: null };
-                    delete estadoUsuarios[nomeAntigo];
-                }
                 funcionarios[index] = { nome: nomeInput, cor: corInput };
                 document.getElementById('config-edit-index').value = -1;
                 document.getElementById('btn-salvar-usuario').innerText = "Adicionar Funcionário";
@@ -564,7 +578,7 @@
 
             salvarFuncionariosStorage();
             document.getElementById('config-nome').value = '';
-            renderizarTela();
+            carregarRegistros();
             alert("Funcionário guardado com sucesso!");
         }
 
@@ -574,10 +588,9 @@
                 return;
             }
             if(confirm(`Tem certeza que deseja remover ${funcionarios[index].nome}?`)) {
-                const removido = funcionarios.splice(index, 1)[0];
-                delete estadoUsuarios[removido.nome];
+                funcionarios.splice(index, 1);
                 salvarFuncionariosStorage();
-                renderizarTela();
+                carregarRegistros();
             }
         }
 
@@ -675,7 +688,7 @@
             painel.innerHTML = htmlResultado;
         }
 
-        // --- CALENDÁRIO COM CORES DINÂMICAS ---
+        // --- CALENDÁRIO ---
         function formatarDataLocal(data) {
             const y = data.getFullYear();
             const m = String(data.getMonth() + 1).padStart(2, '0');
@@ -978,10 +991,13 @@
 
         atualizarRelogio();
         carregarRegistros();
+        
+        // Atualização automática (polling) a cada 5 segundos para sincronizar dispositivos/terminais em tempo real
         setInterval(() => {
             atualizarRelogio();
             atualizarContador();
-        }, 1000);
+            carregarRegistros();
+        }, 5000);
 
     </script>
 </body>
