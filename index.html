@@ -7,12 +7,17 @@
     <style>
         body { margin: 0; display: flex; height: 100vh; font-family: sans-serif; background-color: #f9f9f9; }
         
-        /* Menu Lateral */
-        #sidebar { width: 250px; background: #2c3e50; color: white; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
-        #sidebar h2 { margin-top: 0; margin-bottom: 20px; text-align: center; }
-        #sidebar button { padding: 12px; font-size: 16px; border: none; background: #34495e; color: white; cursor: pointer; text-align: left; border-radius: 4px; }
+        /* Menu Lateral Retrátil */
+        #sidebar { width: 250px; background: #2c3e50; color: white; padding: 20px; display: flex; flex-direction: column; gap: 10px; transition: width 0.3s, padding 0.3s; position: relative; }
+        #sidebar.recolhido { width: 60px; padding: 20px 10px; }
+        #sidebar h2 { margin-top: 0; margin-bottom: 20px; text-align: center; white-space: nowrap; overflow: hidden; }
+        #sidebar.recolhido h2 { font-size: 14px; }
+        #sidebar button { padding: 12px; font-size: 16px; border: none; background: #34495e; color: white; cursor: pointer; text-align: left; border-radius: 4px; white-space: nowrap; overflow: hidden; display: flex; align-items: center; gap: 10px; }
         #sidebar button:hover { background: #415b76; }
-        
+        #sidebar.recolhido button { text-align: center; justify-content: center; }
+        #sidebar.recolhido button span { display: none; }
+        .btn-toggle { background: #1a252f !important; text-align: center; justify-content: center !important; font-weight: bold; margin-bottom: 10px; }
+
         /* Área Central */
         #conteudo-principal { flex: 1; padding: 30px; overflow-y: auto; background: #fff; }
         .aba { display: none; max-width: 800px; margin: 0 auto; }
@@ -63,12 +68,13 @@
 </head>
 <body>
 
-    <!-- Menu Lateral -->
+    <!-- Menu Lateral Retrátil -->
     <div id="sidebar">
+        <button class="btn-toggle" onclick="alternarSidebar()">☰ <span>Recolher</span></button>
         <h2>Ponto Web</h2>
-        <button onclick="mudarAba('ponto')">⏰ Bater Ponto</button>
-        <button onclick="mudarAba('historico')">📅 Histórico & Calendário</button>
-        <button onclick="mudarAba('edicao')">✏️ Ajuste Manual</button>
+        <button onclick="mudarAba('ponto')">⏰ <span>Bater Ponto</span></button>
+        <button onclick="mudarAba('historico')">📅 <span>Histórico & Calendário</span></button>
+        <button onclick="mudarAba('edicao')">✏️ <span>Ajuste Manual</span></button>
     </div>
 
     <!-- Conteúdo Principal -->
@@ -116,9 +122,7 @@
                 <button onclick="mudarMes(1)">Próximo Mês ▶</button>
             </div>
 
-            <div class="cal-grid" id="calendario-grid">
-                <!-- Cabeçalho e Dias gerados via JS -->
-            </div>
+            <div class="cal-grid" id="calendario-grid"></div>
 
             <div id="modal-dia">
                 <h3 id="modal-titulo">Detalhes do Dia</h3>
@@ -174,6 +178,11 @@
         nomes.forEach(nome => {
             if (!estadoUsuarios[nome]) estadoUsuarios[nome] = { trabalhando: false, horaEntrada: null };
         });
+
+        function alternarSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('recolhido');
+        }
 
         function mudarAba(id) {
             document.querySelectorAll('.aba').forEach(aba => aba.classList.remove('ativa'));
@@ -255,7 +264,6 @@
         }
 
         function renderizarTela() {
-            // Renderiza botões de funcionários da aba Principal
             const divFunc = document.getElementById('lista-funcionarios');
             if (divFunc) {
                 divFunc.innerHTML = '';
@@ -268,7 +276,6 @@
                 });
             }
 
-            // Renderiza botões de funcionários da aba Calendário
             const divFuncCal = document.getElementById('lista-funcionarios-cal');
             if (divFuncCal) {
                 divFuncCal.innerHTML = '';
@@ -281,7 +288,6 @@
                 });
             }
 
-            // Estado dos botões de ponto
             const btnIn = document.getElementById('btn-in');
             const btnOut = document.getElementById('btn-out');
             const statusMsg = document.getElementById('status-msg');
@@ -304,7 +310,6 @@
                 if(btnOut) btnOut.disabled = true;
             }
 
-            // Histórico recente
             const divLog = document.getElementById('log-ponto');
             if (divLog) {
                 divLog.innerHTML = '';
@@ -335,7 +340,13 @@
             }
         }
 
-        // --- LÓGICA DO CALENDÁRIO & TURNOS MULTI-DIA ---
+        // --- CORREÇÃO DO FUSO HORÁRIO NO CALENDÁRIO ---
+        function formatarDataLocal(data) {
+            const y = data.getFullYear();
+            const m = String(data.getMonth() + 1).padStart(2, '0');
+            const d = String(data.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
 
         function mudarMes(direcao) {
             dataAtualCal.setMonth(dataAtualCal.getMonth() + direcao);
@@ -344,8 +355,7 @@
 
         function processarTurnosFuncionario(nomeFunc) {
             const regsFunc = registros.filter(r => r.nome === nomeFunc).sort((a,b) => new Date(a.data_completa) - new Date(b.data_completa));
-            let mapaDias = {}; // chave: 'YYYY-MM-DD' -> { shifts: [...] }
-
+            let mapaDias = {}; 
             let entradaPendente = null;
 
             regsFunc.forEach(reg => {
@@ -355,21 +365,18 @@
                     let dtIn = new Date(entradaPendente.data_completa);
                     let dtOut = new Date(reg.data_completa);
 
-                    // Percorre todos os dias entre In e Out (inclusive)
                     let cursor = new Date(dtIn.getFullYear(), dtIn.getMonth(), dtIn.getDate());
                     let fim = new Date(dtOut.getFullYear(), dtOut.getMonth(), dtOut.getDate());
 
                     while (cursor <= fim) {
-                        let chaveDia = cursor.toISOString().split('T')[0];
+                        let chaveDia = formatarDataLocal(cursor);
                         if (!mapaDias[chaveDia]) mapaDias[chaveDia] = [];
 
                         mapaDias[chaveDia].push({
                             idIn: entradaPendente.id,
                             idOut: reg.id,
                             inTime: entradaPendente,
-                            outTime: reg,
-                            ehInicio: cursor.getTime() === new Date(dtIn.getFullYear(), dtIn.getMonth(), dtIn.getDate()).getTime(),
-                            ehFim: cursor.getTime() === new Date(fim.getFullYear(), fim.getMonth(), fim.getDate()).getTime()
+                            outTime: reg
                         });
 
                         cursor.setDate(cursor.getDate() + 1);
@@ -402,13 +409,11 @@
 
             const mapaTrabalho = processarTurnosFuncionario(usuarioSelecionadoCal);
 
-            // Dias do mês anterior para preencher
             for (let i = primeiroDiaMes - 1; i >= 0; i--) {
                 let diaNum = ultimoDiaMesAnterior - i;
                 grid.innerHTML += `<div class="cal-day outro-mes"><span class="cal-day-num">${diaNum}</span></div>`;
             }
 
-            // Dias do mês atual
             for (let dia = 1; dia <= ultimoDiaMes; dia++) {
                 let mesStr = String(mes + 1).padStart(2, '0');
                 let diaStr = String(dia).padStart(2, '0');
@@ -416,11 +421,7 @@
 
                 let dadosDia = mapaTrabalho[chaveIso];
                 let classeTrabalhado = dadosDia ? 'trabalhado' : '';
-
-                let htmlBadge = '';
-                if (dadosDia) {
-                    htmlBadge = `<div class="cal-badge">${dadosDia.length} turno(s)</div>`;
-                }
+                let htmlBadge = dadosDia ? `<div class="cal-badge">${dadosDia.length} turno(s)</div>` : '';
 
                 let celula = document.createElement('div');
                 celula.className = `cal-day ${classeTrabalhado}`;
@@ -444,7 +445,7 @@
 
             conteudo.innerHTML = '';
             dadosDia.forEach((item, index) => {
-                let txtIn = item.inTime ? `${item.inTime.hora_local} (${new Date(item.inTime.data_completa).toLocaleDateString()})` : 'Parcial/Automático';
+                let txtIn = item.inTime ? `${item.inTime.hora_local} (${new Date(item.inTime.data_completa).toLocaleDateString()})` : 'Parcial';
                 let txtOut = item.outTime ? `${item.outTime.hora_local} (${new Date(item.outTime.data_completa).toLocaleDateString()})` : 'Em andamento';
                 
                 conteudo.innerHTML += `
@@ -479,7 +480,6 @@
             document.getElementById('edit-id-out').value = idOut;
             document.getElementById('btn-salvar-texto').innerText = "Atualizar Turno na Base de Dados";
 
-            // Preenche valores se existirem
             const regIn = registros.find(r => r.id == idIn);
             const regOut = registros.find(r => r.id == idOut);
 
@@ -492,7 +492,6 @@
             atualizarFormularioManual();
         }
 
-        // --- RELATÓRIOS ---
         function gerarRelatorio() {
             const periodo = document.getElementById('filtro-tempo').value;
             const painel = document.getElementById('painel-relatorio');
@@ -544,7 +543,6 @@
             });
         }
 
-        // --- FORMULÁRIO MANUAL & EDIÇÃO ---
         function atualizarFormularioManual() {
             const tipo = document.getElementById('man-tipo').value;
             const grupoData2 = document.getElementById('grupo-data2');
@@ -575,7 +573,6 @@
             const dt1 = new Date(valData1);
             
             try {
-                // Se estiver a editar, apaga os antigos antes de inserir os novos
                 if(idIn) await apagarRegistroAPI(idIn);
                 if(idOut) await apagarRegistroAPI(idOut);
 
@@ -598,7 +595,6 @@
                 }
 
                 alert("Registo guardado com sucesso!");
-                // Limpa campos de edição
                 document.getElementById('edit-id-in').value = '';
                 document.getElementById('edit-id-out').value = '';
                 document.getElementById('btn-salvar-texto').innerText = "Salvar na Base de Dados";
@@ -613,7 +609,6 @@
             }
         }
 
-        // Inicialização
         atualizarRelogio();
         carregarRegistros();
         setInterval(() => {
