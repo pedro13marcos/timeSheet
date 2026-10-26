@@ -18,15 +18,18 @@
         /* Collapsible Sidebar */
         #sidebar { width: 250px; background: #2c3e50; color: white; padding: 20px; display: flex; flex-direction: column; gap: 10px; transition: width 0.3s, padding 0.3s; position: relative; }
         #sidebar.recolhido { width: 60px; padding: 20px 10px; }
-        #sidebar h2 { margin-top: 0; margin-bottom: 20px; text-align: center; white-space: nowrap; overflow: hidden; }
-        #sidebar.recolhido h2 { font-size: 14px; }
+        
+        .sidebar-header { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 20px; white-space: nowrap; overflow: hidden; font-size: 20px; font-weight: bold; }
+        .sidebar-header img { width: 30px; height: 30px; border-radius: 6px; }
+        #sidebar.recolhido .sidebar-header { flex-direction: column; padding-top: 10px; gap: 5px; }
+        #sidebar.recolhido .sidebar-header span { display: none; }
+
         #sidebar button { padding: 12px; font-size: 16px; border: none; background: #34495e; color: white; cursor: pointer; text-align: left; border-radius: 4px; white-space: nowrap; overflow: hidden; display: flex; align-items: center; gap: 10px; }
         #sidebar button:hover { background: #415b76; }
         #sidebar.recolhido button { text-align: center; justify-content: center; }
         #sidebar.recolhido button span { display: none; }
         .btn-toggle { background: #1a252f !important; text-align: center; justify-content: center !important; font-weight: bold; margin-bottom: 10px; }
         
-        /* Botão de Instalação PWA */
         #btn-install-pwa { background: #27ae60 !important; font-weight: bold; display: none; }
         #btn-install-pwa:hover { background: #2ed573 !important; }
 
@@ -36,7 +39,6 @@
         .aba { display: none; }
         .aba.ativa { display: block; }
         
-        /* Footer */
         footer { margin-top: 40px; text-align: center; font-size: 13px; color: #666; border-top: 1px solid #eee; padding-top: 15px; }
         footer a { color: #2196F3; text-decoration: none; }
 
@@ -58,7 +60,6 @@
         .btn-relatorio { background-color: #673AB7; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         #painel-relatorio { background: #e3f2fd; padding: 15px; border-radius: 5px; margin-top: 15px; display: none; }
         
-        /* Forms and Settings */
         .form-manual { background: #f4f4f4; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
         .form-manual label { display: block; margin-top: 15px; font-weight: bold; color: #333; }
         .form-manual input, .form-manual select { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
@@ -71,14 +72,16 @@
         .tabela-escala { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; text-align: center; }
         .tabela-escala th, .tabela-escala td { border: 1px solid #ccc; padding: 6px; font-size: 13px; vertical-align: middle; transition: background-color 0.3s; }
         .tabela-escala th { background: #2c3e50; color: white; }
+        
+        /* AVISO: Cobertura Incompleta */
         .tabela-escala th.th-uncovered { background: #d32f2f !important; color: #ffffff !important; font-weight: bold; }
-        .tabela-escala select { width: 100%; text-align: center; padding: 4px; font-size: 12px; border: 1px solid #ccc; border-radius: 3px; background: white; margin-bottom: 2px; }
-        .td-total-horas { background-color: #eef2f7; font-weight: bold; color: #2c3e50; font-size: 14px; }
+        .tabela-escala td.td-uncovered { background-color: rgba(211, 47, 47, 0.15) !important; border-left: 2px solid #d32f2f !important; border-right: 2px solid #d32f2f !important; }
 
-        /* Calendar Filters */
+        .tabela-escala select { width: 100%; text-align: center; padding: 4px; font-size: 12px; border: 1px solid #ccc; border-radius: 3px; background: rgba(255,255,255,0.8); margin-bottom: 2px; }
+        .td-total-horas { background-color: rgba(238, 242, 247, 0.7); font-weight: bold; color: #2c3e50; font-size: 14px; }
+
+        /* Calendar */
         .filtros-calendario { display: flex; gap: 20px; margin-bottom: 15px; background: #eee; padding: 10px; border-radius: 4px; font-size: 14px; font-weight: bold; align-items: center; }
-
-        /* Calendar Styles */
         .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
         .cal-day-name { font-weight: bold; background: #e0e0e0; padding: 10px; border-radius: 4px; }
@@ -93,12 +96,10 @@
         .legenda-item { display: flex; align-items: center; gap: 5px; }
         .legenda-cor { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
 
-        /* Day Details Modal */
         #modal-dia { display: none; background: #fff3e0; border: 1px solid #ffb74d; padding: 15px; border-radius: 5px; margin-top: 20px; }
         .btn-acao-mini { background: #d32f2f; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; }
         .btn-editar-mini { background: #1976d2; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; margin-right: 5px; }
         
-        /* Deleted Items Styling in Reports */
         .deleted-box { background: #ffebee; border-left: 5px solid #f44336; padding: 12px; margin-top: 15px; border-radius: 4px; }
         .deleted-item { font-size: 12px; background: white; padding: 6px; margin-top: 4px; border-radius: 3px; border: 1px solid #ffcdd2; color: #c62828; }
     </style>
@@ -108,8 +109,13 @@
     <!-- Collapsible Sidebar -->
     <div id="sidebar">
         <button class="btn-toggle" onclick="alternarSidebar()">☰ <span>Collapse</span></button>
+        
+        <div class="sidebar-header">
+            <img src="/icon-192.png" alt="Icon" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxyZWN0IHg9IjMiIHk9IjQiIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgcng9IjIiIHJ5PSIyIj48L3JlY3Q+PGxpbmUgeDE9IjE2IiB5MT0iMiIgeDI9IjE2IiB5Mj0iNiI+PC9saW5lPjxsaW5lIHgxPSI4IiB5MT0iMiIgeDI9IjgiIHkyPSI2Ij48L2xpbmU+PGxpbmUgeDE9IjMiIHkxPSIxMCIgeDI9IjIxIiB5Mj0iMTAiPjwvbGluZT48L3N2Zz4='">
+            <span>Time Web</span>
+        </div>
+
         <button id="btn-install-pwa" onclick="instalarPWA()">📲 <span>Install App</span></button>
-        <h2>Time Web</h2>
         <button onclick="mudarAba('ponto')">⏰ <span>Clock In/Out</span></button>
         <button onclick="mudarAba('escala')">📋 <span>Create Schedule</span></button>
         <button onclick="mudarAba('historico')">📅 <span>Calendar</span></button>
@@ -166,7 +172,6 @@
                     <button class="btn-acao" onclick="salvarTabelaEscala()" style="margin:0; width: 200px;">💾 Save Schedule</button>
                 </div>
 
-                <!-- Tool: Copy Schedule from Another Week -->
                 <div class="form-manual" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap; background: #eef2f7;">
                     <label style="margin:0; flex: 1; min-width: 200px;">Copy from another week (any day):
                         <input type="date" id="escala-origem-copia" style="margin-top: 5px;">
@@ -291,10 +296,8 @@
             </div>
 
         </div>
-
-        <!-- Footer with GitHub Deploy and Personal Info -->
         <footer>
-            Deploy: <strong>v1.2 (GitHub / Vercel Production)</strong> — Website developed by <strong>Pedro Marcos</strong> — Contact: <a href="mailto:pedromarcos212@gmail.com">pedromarcos212@gmail.com</a>
+            Deploy: <strong>v1.3 (GitHub / Vercel Production)</strong> — Website developed by <strong>Pedro Marcos</strong> — Contact: <a href="mailto:pedromarcos212@gmail.com">pedromarcos212@gmail.com</a>
         </footer>
     </div>
 
@@ -339,6 +342,21 @@
         let dataAtualCal = new Date();
         let estadoUsuarios = {};
         let deferredPrompt = null;
+
+        // Função para clarear cores
+        function hexToRgba(hex, alpha) {
+            let r = 0, g = 0, b = 0;
+            if (hex.length === 4) {
+                r = parseInt(hex[1] + hex[1], 16);
+                g = parseInt(hex[2] + hex[2], 16);
+                b = parseInt(hex[3] + hex[3], 16);
+            } else if (hex.length === 7) {
+                r = parseInt(hex[1] + hex[2], 16);
+                g = parseInt(hex[3] + hex[4], 16);
+                b = parseInt(hex[5] + hex[6], 16);
+            }
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
 
         function salvarFuncionariosStorage() {
             localStorage.setItem('funcionariosConfig', JSON.stringify(funcionarios));
@@ -796,7 +814,6 @@
             return Math.max(0, hOut - hIn);
         }
 
-        // Mapeia e identifica lacunas de horários sem cobertura entre 12:00 e o Closing ('C')
         function obterLacunasCoberturaDia(dias, idx) {
             const diaInfo = dias[idx];
             const nomeDia = diaInfo.nomeDia;
@@ -841,7 +858,6 @@
                 return { lacunas: [], lacunasTexto: [] };
             }
 
-            // Agrupa horas consecutivas em blocos de texto
             let lacunasTexto = [];
             let inicioBloco = horasSemCobertura[0];
             let fimBloco = horasSemCobertura[0] + 1;
@@ -865,7 +881,7 @@
                 if (h >= 24) return `${String(h - 24).padStart(2, '0')}:00 ND`;
                 return `${String(h).padStart(2, '0')}:00`;
             }
-            let txtFim = (fim === hFechamento) ? `${fmt(fim)} (Closing)` : fmt(fim);
+            let txtFim = (fim === hFechamento) ? `${fmt(fim)} (C)` : fmt(fim);
             return `${fmt(inicio)} to ${txtFim}`;
         }
 
@@ -875,6 +891,8 @@
             dias.forEach((d, idx) => {
                 let resultado = obterLacunasCoberturaDia(dias, idx);
                 let th = document.querySelector(`#tabela-escala-grid th[data-day-idx="${idx}"]`);
+                // Seleciona todos os TDs correspondentes a esta coluna
+                let tdList = document.querySelectorAll(`#tabela-escala-grid tr td:nth-child(${idx + 2})`);
                 
                 if (resultado.lacunas.length > 0) {
                     if (th) {
@@ -882,6 +900,7 @@
                         th.innerHTML = `⚠️ ${d.nomeDia.slice(0,3)}<br>${d.dataFormatada}`;
                         th.title = `Uncovered period: ${resultado.lacunasTexto.join(', ')}`;
                     }
+                    tdList.forEach(td => td.classList.add('td-uncovered'));
                     avisos.push(`<strong>${d.nomeDia} (${d.dataFormatada}):</strong> Uncovered from ${resultado.lacunasTexto.join(', ')}`);
                 } else {
                     if (th) {
@@ -889,6 +908,7 @@
                         th.innerHTML = `${d.nomeDia.slice(0,3)}<br>${d.dataFormatada}`;
                         th.title = "";
                     }
+                    tdList.forEach(td => td.classList.remove('td-uncovered'));
                 }
             });
 
@@ -910,7 +930,6 @@
             if (!dataSegunda) return;
             const dias = obterDiasDaSemana(dataSegunda);
 
-            // 1. Recalcula o total de horas semanais por funcionário
             linhas.forEach(tr => {
                 let totalMinutos = 0;
                 const selectsIn = tr.querySelectorAll('.sel-in');
@@ -934,7 +953,6 @@
                 }
             });
 
-            // 2. Destaca colunas e exibe o banner com períodos descobertos
             verificarEExibirAvisosCobertura(dias);
         }
 
@@ -954,7 +972,14 @@
             html += `<th>Total Hours</th></tr></thead><tbody>`;
 
             nomesAtuais.forEach(nome => {
-                html += `<tr><td style="font-weight:bold; background:#f4f4f4;">${nome}</td>`;
+                const corHex = obterCorFuncionario(nome);
+                const bgRowColor = hexToRgba(corHex, 0.1); 
+                const bgNomeColor = hexToRgba(corHex, 0.25);
+                
+                // Colorindo o background da linha de acordo com a cor do funcionário
+                html += `<tr style="background-color: ${bgRowColor};">
+                            <td style="font-weight:bold; background-color: ${bgNomeColor}; border-left: 5px solid ${corHex};">${nome}</td>`;
+                
                 dias.forEach(d => {
                     let esc = escalas.find(e => {
                         let eData = normalizarData(e.data_turno);
@@ -1736,7 +1761,6 @@
             }
         }
 
-        // PWA Install Event Handler
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
@@ -1756,7 +1780,6 @@
             if (btnInstall) btnInstall.style.display = 'none';
         }
 
-        // Registro do Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
@@ -1765,13 +1788,11 @@
             });
         }
 
-        // Atualização contínua do relógio a cada 1 segundo
         setInterval(() => {
             atualizarRelogio();
             atualizarContador();
         }, 1000);
 
-        // Busca periódica de dados no servidor sem recriar a tabela de escala ativamente
         setInterval(() => {
             carregarDadosGerais(false);
         }, 10000);

@@ -1,11 +1,10 @@
-const CACHE_NAME = 'timeweb-cache-v1';
+const CACHE_NAME = 'timeweb-cache-v2'; // Mudamos para v2 para forçar a atualização
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json'
 ];
 
-// Instalação do Service Worker
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -15,7 +14,6 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Ativação do Service Worker
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -31,11 +29,11 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Interceptação de requisições (Carrega do cache ou busca da rede)
+// Estratégia "Network First" (Busca da rede primeiro, se falhar usa o cache)
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
+    fetch(event.request).catch(() => {
+      return caches.match(event.request);
     })
   );
 });
