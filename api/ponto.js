@@ -3,6 +3,7 @@ import { sql } from '@vercel/postgres';
 export default async function handler(req, res) {
     if (req.method === 'POST') {
         const { nome, evento, hora_local, data_completa, resumo } = req.body;
+        
         try {
             await sql`
                 INSERT INTO registros_ponto (nome, evento, hora_local, data_completa, resumo)
@@ -13,7 +14,8 @@ export default async function handler(req, res) {
             return res.status(500).json({ erro: error.message });
         }
     } 
-    else if (req.method === 'GET') {
+    
+    if (req.method === 'GET') {
         try {
             const { rows } = await sql`
                 SELECT * FROM registros_ponto 
@@ -25,11 +27,12 @@ export default async function handler(req, res) {
             return res.status(500).json({ erro: error.message });
         }
     }
-    else if (req.method === 'DELETE') {
-        const { id } = req.body;
+
+    if (req.method === 'DELETE') {
+        const { id } = req.query;
         try {
-            await sql`DELETE FROM registros_ponto WHERE id = ${id}`;
-            return res.status(200).json({ mensagem: "Registo apagado" });
+            await sql`DELETE FROM registros_ponto WHERE id = ${id};`;
+            return res.status(200).json({ mensagem: "Registo apagado com sucesso!" });
         } catch (error) {
             return res.status(500).json({ erro: error.message });
         }

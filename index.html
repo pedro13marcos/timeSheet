@@ -5,32 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Ponto</title>
     <style>
-        body { margin: 0; display: flex; height: 100vh; font-family: sans-serif; background-color: #fff; }
+        body { margin: 0; display: flex; height: 100vh; font-family: sans-serif; background-color: #f9f9f9; }
         
+        /* Menu Lateral */
         #sidebar { width: 250px; background: #2c3e50; color: white; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
         #sidebar h2 { margin-top: 0; margin-bottom: 20px; text-align: center; }
         #sidebar button { padding: 12px; font-size: 16px; border: none; background: #34495e; color: white; cursor: pointer; text-align: left; border-radius: 4px; }
         #sidebar button:hover { background: #415b76; }
         
-        #conteudo-principal { flex: 1; padding: 30px; overflow-y: auto; }
+        /* Área Central */
+        #conteudo-principal { flex: 1; padding: 30px; overflow-y: auto; background: #fff; }
         .aba { display: none; max-width: 800px; margin: 0 auto; }
         .aba.ativa { display: block; }
         
-        /* Comuns */
+        /* Aba Ponto */
+        #relogio { font-size: 2.5em; font-weight: bold; text-align: center; margin-bottom: 20px; color: #333; }
         .funcionarios { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         .btn-func { padding: 10px 15px; font-size: 16px; border: 1px solid #ccc; background: #fff; cursor: pointer; border-radius: 4px; }
         .btn-func.ativo { background: #2196F3; color: white; border-color: #2196F3; }
-        
-        /* Ponto */
-        #relogio { font-size: 2.5em; font-weight: bold; text-align: center; margin-bottom: 20px; color: #333; }
         .botoes-ponto { display: flex; gap: 10px; margin-bottom: 20px; }
         .btn-ponto { flex: 1; padding: 15px; font-size: 16px; cursor: pointer; border: none; border-radius: 4px; color: white; font-weight: bold; }
         #btn-in { background-color: #4CAF50; }
         #btn-out { background-color: #f44336; }
         #btn-in:disabled, #btn-out:disabled { background-color: #ccc; cursor: not-allowed; }
         #status-msg { margin-bottom: 15px; font-weight: bold; color: #555; }
-        #log-ponto { background: #f4f4f4; padding: 15px; border-radius: 5px; min-height: 100px; max-height: 300px; overflow-y: auto; margin-bottom: 20px; }
-        .registro-item { border-bottom: 1px solid #ddd; padding: 8px 0; display: flex; justify-content: space-between; }
+        #log-ponto { background: #f4f4f4; padding: 15px; border-radius: 5px; min-height: 100px; max-height: 250px; overflow-y: auto; margin-bottom: 20px; }
+        .registro-item { border-bottom: 1px solid #ddd; padding: 8px 0; display: flex; justify-content: space-between; align-items: center; }
         
         /* Relatórios */
         .area-relatorio { display: flex; gap: 10px; margin-top: 10px; }
@@ -38,43 +38,49 @@
         .btn-relatorio { background-color: #673AB7; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         #painel-relatorio { background: #e3f2fd; padding: 15px; border-radius: 5px; margin-top: 15px; display: none; }
         
-        /* Formulário Manual */
+        /* Formulários Manuais */
         .form-manual { background: #f4f4f4; padding: 20px; border-radius: 5px; }
         .form-manual label { display: block; margin-top: 15px; font-weight: bold; color: #333; }
         .form-manual input, .form-manual select { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
         .btn-salvar-manual { background-color: #FF9800; color: white; border: none; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 4px; cursor: pointer; width: 100%; margin-top: 20px; }
         
-        /* Calendário */
-        .calendario-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .calendario-header button { padding: 5px 15px; font-size: 16px; cursor: pointer; }
-        .calendario-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
-        .dia-header { background: #eee; font-weight: bold; text-align: center; padding: 10px; border-radius: 4px; }
-        .dia-cal { border: 1px solid #ddd; height: 60px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 4px; font-size: 18px; transition: 0.2s; }
-        .dia-cal:hover { background: #f0f0f0; }
-        .dia-cal.vazio { background: #fafafa; color: #ccc; cursor: default; }
-        .dia-cal.trabalhado { background: #4CAF50; color: white; font-weight: bold; border-color: #388E3C; }
-        #painel-detalhes-dia { background: #fffde7; padding: 20px; border-radius: 5px; margin-top: 20px; border: 1px solid #ffd54f; display: none; }
-        .bloco-turno { background: white; padding: 15px; border-radius: 4px; margin-top: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .btn-editar { background: #2196F3; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; margin-top: 10px; }
+        /* Estilos do Calendário */
+        .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
+        .cal-day-name { font-weight: bold; background: #e0e0e0; padding: 10px; border-radius: 4px; }
+        .cal-day { background: #f1f1f1; min-height: 80px; padding: 5px; border-radius: 4px; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+        .cal-day:hover { background: #e4e4e4; }
+        .cal-day.trabalhado { background: #c8e6c9; border: 1px solid #81c784; }
+        .cal-day.outro-mes { opacity: 0.3; }
+        .cal-day-num { font-weight: bold; font-size: 14px; }
+        .cal-badge { font-size: 11px; background: #2e7d32; color: white; padding: 2px 4px; border-radius: 3px; margin-top: 2px; }
+        
+        /* Modal de Detalhes do Dia */
+        #modal-dia { display: none; background: #fff3e0; border: 1px solid #ffb74d; padding: 15px; border-radius: 5px; margin-top: 20px; }
+        .btn-acao-mini { background: #d32f2f; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; }
+        .btn-editar-mini { background: #1976d2; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; margin-right: 5px; }
     </style>
 </head>
 <body>
 
+    <!-- Menu Lateral -->
     <div id="sidebar">
         <h2>Ponto Web</h2>
         <button onclick="mudarAba('ponto')">⏰ Bater Ponto</button>
-        <button onclick="mudarAba('historico')">📅 Histórico</button>
-        <button onclick="mudarAba('edicao')">➕ Adicionar Turno</button>
+        <button onclick="mudarAba('historico')">📅 Histórico & Calendário</button>
+        <button onclick="mudarAba('edicao')">✏️ Ajuste Manual</button>
     </div>
 
+    <!-- Conteúdo Principal -->
     <div id="conteudo-principal">
         
-        <!-- ABA PONTO -->
+        <!-- ABA 1: Bater Ponto -->
         <div id="aba-ponto" class="aba ativa">
             <h1>Controle de Ponto</h1>
             <div id="relogio">00:00:00</div>
             
-            <div class="funcionarios" id="lista-funcionarios-ponto"></div>
+            <h3>Selecione o Funcionário:</h3>
+            <div class="funcionarios" id="lista-funcionarios"></div>
             <div id="status-msg">Nenhum funcionário selecionado</div>
 
             <div class="botoes-ponto">
@@ -82,63 +88,65 @@
                 <button class="btn-ponto" id="btn-out" onclick="registrarPonto('out')" disabled>Clock Out</button>
             </div>
 
-            <h2>Últimos Registros (Geral)</h2>
+            <h2>Histórico Recente</h2>
             <div id="log-ponto">Carregando dados...</div>
 
             <div class="area-relatorio">
                 <select id="filtro-tempo">
-                    <option value="mensal">Mês Atual (Desde o dia 1)</option>
-                    <option value="quinzenal">Últimos 14 dias (Bi-semanal)</option>
-                    <option value="semanal">Últimos 7 dias (Semanal)</option>
-                    <option value="6_meses">Últimos 6 Meses (Geral)</option>
+                    <option value="6_meses">Últimos 6 Meses</option>
+                    <option value="mensal">Mês Atual</option>
+                    <option value="quinzenal">Últimos 14 dias</option>
+                    <option value="semanal">Últimos 7 dias</option>
                 </select>
-                <button class="btn-relatorio" onclick="gerarRelatorio()">Gerar Resumo</button>
+                <button class="btn-relatorio" onclick="gerarRelatorio()">Calcular Relatório</button>
             </div>
             <div id="painel-relatorio"></div>
         </div>
 
-        <!-- ABA HISTÓRICO CALENDÁRIO -->
+        <!-- ABA 2: Histórico e Calendário -->
         <div id="aba-historico" class="aba">
-            <h1>Histórico e Calendário</h1>
-            <p>Selecione um funcionário para ver os dias trabalhados.</p>
+            <h1>Calendário de Turnos</h1>
             
-            <div class="funcionarios" id="lista-funcionarios-hist"></div>
-            
-            <div id="area-calendario" style="display:none;">
-                <div class="calendario-header">
-                    <button onclick="mudarMes(-1)">◀ Anterior</button>
-                    <h2 id="mes-ano-display">Mês Ano</h2>
-                    <button onclick="mudarMes(1)">Próximo ▶</button>
-                </div>
-                
-                <div class="calendario-grid" id="grid-calendario">
-                    <div class="dia-header">Dom</div><div class="dia-header">Seg</div>
-                    <div class="dia-header">Ter</div><div class="dia-header">Qua</div>
-                    <div class="dia-header">Qui</div><div class="dia-header">Sex</div>
-                    <div class="dia-header">Sáb</div>
-                </div>
-                
-                <div id="painel-detalhes-dia"></div>
+            <h3>Selecione o Funcionário:</h3>
+            <div class="funcionarios" id="lista-funcionarios-cal"></div>
+
+            <div class="cal-header">
+                <button onclick="mudarMes(-1)">◀ Mês Anterior</button>
+                <h2 id="cal-mes-ano">Mês Ano</h2>
+                <button onclick="mudarMes(1)">Próximo Mês ▶</button>
+            </div>
+
+            <div class="cal-grid" id="calendario-grid">
+                <!-- Cabeçalho e Dias gerados via JS -->
+            </div>
+
+            <div id="modal-dia">
+                <h3 id="modal-titulo">Detalhes do Dia</h3>
+                <div id="modal-conteudo"></div>
             </div>
         </div>
 
-        <!-- ABA ADICIONAR/EDITAR MANUAL -->
+        <!-- ABA 3: Ajuste Manual / Edição -->
         <div id="aba-edicao" class="aba">
-            <h1 id="titulo-edicao">Adicionar Turno Manual</h1>
-            <p id="desc-edicao">Adicione um turno esquecido à base de dados.</p>
+            <h1 id="titulo-modo-edicao">Ajuste Manual de Horas</h1>
             
             <div class="form-manual">
-                <input type="hidden" id="edit-id-in">
-                <input type="hidden" id="edit-id-out">
-                
+                <input type="hidden" id="edit-id-in" value="">
+                <input type="hidden" id="edit-id-out" value="">
+
                 <label>Funcionário:</label>
-                <select id="man-nome"></select>
+                <select id="man-nome">
+                    <option value="Pedro">Pedro</option>
+                    <option value="Max">Max</option>
+                    <option value="Carlos">Carlos</option>
+                    <option value="Sanny">Sanny</option>
+                </select>
 
                 <label>Tipo de Ajuste:</label>
                 <select id="man-tipo" onchange="atualizarFormularioManual()">
-                    <option value="shift">Turno Completo (Entrada e Saída)</option>
-                    <option value="in">Apenas Entrada</option>
-                    <option value="out">Apenas Saída</option>
+                    <option value="shift">Turno Completo (In e Out)</option>
+                    <option value="in">Apenas Clock In</option>
+                    <option value="out">Apenas Clock Out</option>
                 </select>
 
                 <label id="lbl-data1">Data e Hora de Entrada:</label>
@@ -149,7 +157,7 @@
                     <input type="datetime-local" id="man-data2">
                 </div>
 
-                <button class="btn-salvar-manual" onclick="salvarRegistroManual()">Salvar na Base de Dados</button>
+                <button class="btn-salvar-manual" id="btn-salvar-texto" onclick="salvarRegistroManual()">Salvar na Base de Dados</button>
             </div>
         </div>
 
@@ -157,129 +165,462 @@
 
     <script>
         const nomes = ['Pedro', 'Max', 'Carlos', 'Sanny'];
-        let registrosGlobais = [];
-        let estadoUsuarios = JSON.parse(localStorage.getItem('estadoUsuarios')) || {};
+        let usuarioSelecionado = null;
+        let usuarioSelecionadoCal = null;
+        let registros = [];
         
-        // Estado Ponto
-        let funcPonto = null;
-        // Estado Histórico
-        let funcHist = null;
-        let anoAtual = new Date().getFullYear();
-        let mesAtual = new Date().getMonth();
-        let mapaDiasTrabalhados = {}; 
-
-        // Inicializa dados básicos
+        let dataAtualCal = new Date();
+        let estadoUsuarios = JSON.parse(localStorage.getItem('estadoUsuarios')) || {};
         nomes.forEach(nome => {
             if (!estadoUsuarios[nome]) estadoUsuarios[nome] = { trabalhando: false, horaEntrada: null };
-            document.getElementById('man-nome').innerHTML += `<option value="${nome}">${nome}</option>`;
         });
 
         function mudarAba(id) {
-            document.querySelectorAll('.aba').forEach(a => a.classList.remove('ativa'));
+            document.querySelectorAll('.aba').forEach(aba => aba.classList.remove('ativa'));
             document.getElementById(`aba-${id}`).classList.add('ativa');
-            
-            // Reseta form manual ao entrar
-            if (id === 'edicao') {
-                document.getElementById('titulo-edicao').innerText = "Adicionar Turno Manual";
-                document.getElementById('edit-id-in').value = "";
-                document.getElementById('edit-id-out').value = "";
+            if(id === 'historico' && !usuarioSelecionadoCal) {
+                usuarioSelecionadoCal = nomes[0];
             }
+            renderizarTela();
+        }
+
+        function atualizarRelogio() {
+            const agora = new Date();
+            document.getElementById('relogio').innerText = agora.toLocaleTimeString('pt-BR');
+        }
+
+        function selecionar(nome) {
+            usuarioSelecionado = nome;
+            renderizarTela();
+            atualizarContador();
+        }
+
+        function selecionarCal(nome) {
+            usuarioSelecionadoCal = nome;
+            renderizarTela();
         }
 
         async function carregarRegistros() {
             try {
                 const resposta = await fetch('/api/ponto');
-                registrosGlobais = await resposta.json();
-                renderizarTelaPonto();
-                if (funcHist) calcularMapaDias(funcHist); // Atualiza calendário se aberto
+                registros = await resposta.json();
+                renderizarTela();
             } catch (erro) {
-                console.error("Erro ao carregar");
+                document.getElementById('log-ponto').innerText = "Erro ao carregar os registos.";
             }
         }
 
-        async function dispararAPI(nome, evento, dataIso, horaLocal, resumo) {
+        async function dispararRequisicaoAPI(nome, evento, dataIso, horaLocal, resumo) {
+            const payload = { nome, evento, hora_local: horaLocal, data_completa: dataIso, resumo };
             await fetch('/api/ponto', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nome, evento, hora_local: horaLocal, data_completa: dataIso, resumo })
+                body: JSON.stringify(payload)
             });
         }
 
-        async function deletarRegistro(id) {
-            if(!id) return;
-            await fetch('/api/ponto', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id })
-            });
-        }
-
-        // --- ABA PONTO ---
-        function selecionarPonto(nome) {
-            funcPonto = nome;
-            renderizarTelaPonto();
+        async function apagarRegistroAPI(id) {
+            await fetch(`/api/ponto?id=${id}`, { method: 'DELETE' });
         }
 
         async function registrarPonto(tipo) {
-            if (!funcPonto) return;
-            const estado = estadoUsuarios[funcPonto];
+            if (!usuarioSelecionado) return;
+            const estado = estadoUsuarios[usuarioSelecionado];
             const agora = new Date();
-            const dtIso = agora.toISOString();
-            const hLocal = agora.toLocaleTimeString('pt-BR');
+            const dataIso = agora.toISOString();
+            const horaLocal = agora.toLocaleTimeString('pt-BR');
 
             try {
                 if (tipo === 'in') {
                     estado.trabalhando = true;
-                    estado.horaEntrada = dtIso;
-                    await dispararAPI(funcPonto, 'Clock In', dtIso, hLocal, '');
+                    estado.horaEntrada = dataIso;
+                    await dispararRequisicaoAPI(usuarioSelecionado, 'Clock In', dataIso, horaLocal, '');
                 } else if (tipo === 'out') {
                     const entrada = new Date(estado.horaEntrada);
-                    const minTotais = Math.floor((agora - entrada) / 60000);
+                    const minutosTotais = Math.floor((agora - entrada) / 60000);
+                    const horas = Math.floor(minutosTotais / 60);
+                    const minutos = minutosTotais % 60;
+                    
                     estado.trabalhando = false;
                     estado.horaEntrada = null;
-                    await dispararAPI(funcPonto, 'Clock Out', dtIso, hLocal, `(Duração: ${formatarH(minTotais)})`);
+                    await dispararRequisicaoAPI(usuarioSelecionado, 'Clock Out', dataIso, horaLocal, `(Duração: ${horas}h ${minutos}m)`);
                 }
+
                 localStorage.setItem('estadoUsuarios', JSON.stringify(estadoUsuarios));
+                renderizarTela();
                 await carregarRegistros();
-            } catch (e) { alert("Erro ao salvar."); }
+            } catch (erro) {
+                alert("Erro ao salvar no servidor.");
+            }
         }
 
-        function renderizarTelaPonto() {
-            const divFunc = document.getElementById('lista-funcionarios-ponto');
-            divFunc.innerHTML = '';
-            nomes.forEach(n => {
-                divFunc.innerHTML += `<button class="btn-func ${funcPonto === n ? 'ativo' : ''}" onclick="selecionarPonto('${n}')">${n}</button>`;
-            });
-
-            const btnIn = document.getElementById('btn-in');
-            const btnOut = document.getElementById('btn-out');
-            const sMsg = document.getElementById('status-msg');
-
-            if (funcPonto) {
-                const est = estadoUsuarios[funcPonto];
-                if (est.trabalhando) {
-                    sMsg.innerText = `${funcPonto} está em turno.`;
-                    btnIn.disabled = true; btnOut.disabled = false;
-                } else {
-                    sMsg.innerText = `${funcPonto} fora do turno.`;
-                    btnIn.disabled = false; btnOut.disabled = true;
-                    btnOut.innerText = 'Clock Out';
-                }
+        function renderizarTela() {
+            // Renderiza botões de funcionários da aba Principal
+            const divFunc = document.getElementById('lista-funcionarios');
+            if (divFunc) {
+                divFunc.innerHTML = '';
+                nomes.forEach(nome => {
+                    const btn = document.createElement('button');
+                    btn.className = `btn-func ${usuarioSelecionado === nome ? 'ativo' : ''}`;
+                    btn.innerText = nome;
+                    btn.onclick = () => selecionar(nome);
+                    divFunc.appendChild(btn);
+                });
             }
 
+            // Renderiza botões de funcionários da aba Calendário
+            const divFuncCal = document.getElementById('lista-funcionarios-cal');
+            if (divFuncCal) {
+                divFuncCal.innerHTML = '';
+                nomes.forEach(nome => {
+                    const btn = document.createElement('button');
+                    btn.className = `btn-func ${usuarioSelecionadoCal === nome ? 'ativo' : ''}`;
+                    btn.innerText = nome;
+                    btn.onclick = () => { selecionarCal(nome); montarCalendario(); };
+                    divFuncCal.appendChild(btn);
+                });
+            }
+
+            // Estado dos botões de ponto
+            const btnIn = document.getElementById('btn-in');
+            const btnOut = document.getElementById('btn-out');
+            const statusMsg = document.getElementById('status-msg');
+
+            if (usuarioSelecionado && btnIn && btnOut) {
+                const estado = estadoUsuarios[usuarioSelecionado];
+                if (estado.trabalhando) {
+                    statusMsg.innerText = `Status: ${usuarioSelecionado} está em turno.`;
+                    btnIn.disabled = true;
+                    btnOut.disabled = false;
+                } else {
+                    statusMsg.innerText = `Status: ${usuarioSelecionado} fora do turno.`;
+                    btnIn.disabled = false;
+                    btnOut.disabled = true;
+                    btnOut.innerText = 'Clock Out'; 
+                }
+            } else if(statusMsg) {
+                statusMsg.innerText = 'Nenhum funcionário selecionado';
+                if(btnIn) btnIn.disabled = true;
+                if(btnOut) btnOut.disabled = true;
+            }
+
+            // Histórico recente
             const divLog = document.getElementById('log-ponto');
-            divLog.innerHTML = '';
-            registrosGlobais.slice(0, 50).forEach(r => {
-                divLog.innerHTML += `<div class="registro-item"><span><strong>${r.nome}</strong> | ${r.evento} às ${r.hora_local}</span> <span>${r.resumo || ''}</span></div>`;
+            if (divLog) {
+                divLog.innerHTML = '';
+                registros.forEach(reg => {
+                    divLog.innerHTML += `<div class="registro-item">
+                        <span><strong>${reg.nome}</strong> | ${reg.evento} às ${reg.hora_local} (${new Date(reg.data_completa).toLocaleDateString()}) ${reg.resumo || ''}</span>
+                    </div>`;
+                });
+            }
+
+            if(usuarioSelecionadoCal) {
+                montarCalendario();
+            }
+        }
+
+        function atualizarContador() {
+            if (usuarioSelecionado) {
+                const estado = estadoUsuarios[usuarioSelecionado];
+                if (estado.trabalhando && estado.horaEntrada) {
+                    const agora = new Date();
+                    const entrada = new Date(estado.horaEntrada);
+                    const minutosTotais = Math.floor((agora - entrada) / 60000);
+                    const horas = Math.floor(minutosTotais / 60);
+                    const minutos = minutosTotais % 60;
+                    const btnOut = document.getElementById('btn-out');
+                    if(btnOut) btnOut.innerText = `Clock Out (${horas}h ${minutos}m)`;
+                }
+            }
+        }
+
+        // --- LÓGICA DO CALENDÁRIO & TURNOS MULTI-DIA ---
+
+        function mudarMes(direcao) {
+            dataAtualCal.setMonth(dataAtualCal.getMonth() + direcao);
+            montarCalendario();
+        }
+
+        function processarTurnosFuncionario(nomeFunc) {
+            const regsFunc = registros.filter(r => r.nome === nomeFunc).sort((a,b) => new Date(a.data_completa) - new Date(b.data_completa));
+            let mapaDias = {}; // chave: 'YYYY-MM-DD' -> { shifts: [...] }
+
+            let entradaPendente = null;
+
+            regsFunc.forEach(reg => {
+                if (reg.evento === 'Clock In') {
+                    entradaPendente = reg;
+                } else if (reg.evento === 'Clock Out' && entradaPendente) {
+                    let dtIn = new Date(entradaPendente.data_completa);
+                    let dtOut = new Date(reg.data_completa);
+
+                    // Percorre todos os dias entre In e Out (inclusive)
+                    let cursor = new Date(dtIn.getFullYear(), dtIn.getMonth(), dtIn.getDate());
+                    let fim = new Date(dtOut.getFullYear(), dtOut.getMonth(), dtOut.getDate());
+
+                    while (cursor <= fim) {
+                        let chaveDia = cursor.toISOString().split('T')[0];
+                        if (!mapaDias[chaveDia]) mapaDias[chaveDia] = [];
+
+                        mapaDias[chaveDia].push({
+                            idIn: entradaPendente.id,
+                            idOut: reg.id,
+                            inTime: entradaPendente,
+                            outTime: reg,
+                            ehInicio: cursor.getTime() === new Date(dtIn.getFullYear(), dtIn.getMonth(), dtIn.getDate()).getTime(),
+                            ehFim: cursor.getTime() === new Date(fim.getFullYear(), fim.getMonth(), fim.getDate()).getTime()
+                        });
+
+                        cursor.setDate(cursor.getDate() + 1);
+                    }
+                    entradaPendente = null;
+                }
+            });
+
+            return mapaDias;
+        }
+
+        function montarCalendario() {
+            const grid = document.getElementById('calendario-grid');
+            const lblMesAno = document.getElementById('cal-mes-ano');
+            if (!grid || !usuarioSelecionadoCal) return;
+
+            grid.innerHTML = '';
+            const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+            diasSemana.forEach(d => {
+                grid.innerHTML += `<div class="cal-day-name">${d}</div>`;
+            });
+
+            const ano = dataAtualCal.getFullYear();
+            const mes = dataAtualCal.getMonth();
+            lblMesAno.innerText = `${dataAtualCal.toLocaleString('pt-BR', { month: 'long' })} de ${ano}`;
+
+            const primeiroDiaMes = new Date(ano, mes, 1).getDay();
+            const ultimoDiaMes = new Date(ano, mes + 1, 0).getDate();
+            const ultimoDiaMesAnterior = new Date(ano, mes, 0).getDate();
+
+            const mapaTrabalho = processarTurnosFuncionario(usuarioSelecionadoCal);
+
+            // Dias do mês anterior para preencher
+            for (let i = primeiroDiaMes - 1; i >= 0; i--) {
+                let diaNum = ultimoDiaMesAnterior - i;
+                grid.innerHTML += `<div class="cal-day outro-mes"><span class="cal-day-num">${diaNum}</span></div>`;
+            }
+
+            // Dias do mês atual
+            for (let dia = 1; dia <= ultimoDiaMes; dia++) {
+                let mesStr = String(mes + 1).padStart(2, '0');
+                let diaStr = String(dia).padStart(2, '0');
+                let chaveIso = `${ano}-${mesStr}-${diaStr}`;
+
+                let dadosDia = mapaTrabalho[chaveIso];
+                let classeTrabalhado = dadosDia ? 'trabalhado' : '';
+
+                let htmlBadge = '';
+                if (dadosDia) {
+                    htmlBadge = `<div class="cal-badge">${dadosDia.length} turno(s)</div>`;
+                }
+
+                let celula = document.createElement('div');
+                celula.className = `cal-day ${classeTrabalhado}`;
+                celula.innerHTML = `<span class="cal-day-num">${dia}</span>${htmlBadge}`;
+                celula.onclick = () => abrirDetalhesDia(chaveIso, dadosDia);
+                grid.appendChild(celula);
+            }
+        }
+
+        function abrirDetalhesDia(dataIso, dadosDia) {
+            const modal = document.getElementById('modal-dia');
+            const titulo = document.getElementById('modal-titulo');
+            const conteudo = document.getElementById('modal-conteudo');
+            modal.style.display = 'block';
+            titulo.innerText = `Turnos em ${dataIso.split('-').reverse().join('/')} (${usuarioSelecionadoCal})`;
+
+            if (!dadosDia || dadosDia.length === 0) {
+                conteudo.innerHTML = `<p>Nenhum registo de turno neste dia.</p>`;
+                return;
+            }
+
+            conteudo.innerHTML = '';
+            dadosDia.forEach((item, index) => {
+                let txtIn = item.inTime ? `${item.inTime.hora_local} (${new Date(item.inTime.data_completa).toLocaleDateString()})` : 'Parcial/Automático';
+                let txtOut = item.outTime ? `${item.outTime.hora_local} (${new Date(item.outTime.data_completa).toLocaleDateString()})` : 'Em andamento';
+                
+                conteudo.innerHTML += `
+                    <div style="background:white; padding:10px; margin-bottom:8px; border-radius:4px;">
+                        <p><strong>Turno #${index+1}</strong></p>
+                        <p>🟢 Início: ${txtIn}</p>
+                        <p>🔴 Fim: ${txtOut}</p>
+                        <button class="btn-editar-mini" onclick="prepararEdicao('${item.idIn}', '${item.idOut}', '${usuarioSelecionadoCal}')">✏️ Editar Turno</button>
+                        <button class="btn-acao-mini" onclick="excluirTurno('${item.idIn}', '${item.idOut}')">🗑️ Apagar</button>
+                    </div>
+                `;
             });
         }
 
-        // --- ABA HISTÓRICO & CALENDÁRIO ---
-        function selecionarHist(nome) {
-            funcHist = nome;
-            document.getElementById('area-calendario').style.display = 'block';
-            document.getElementById('painel-detalhes-dia').style.display = 'none';
+        async function excluirTurno(idIn, idOut) {
+            if(confirm("Tem certeza que deseja apagar este registo?")) {
+                if(idIn && idIn !== 'undefined') await apagarRegistroAPI(idIn);
+                if(idOut && idOut !== 'undefined') await apagarRegistroAPI(idOut);
+                alert("Registo apagado com sucesso!");
+                await carregarRegistros();
+                montarCalendario();
+                document.getElementById('modal-dia').style.display = 'none';
+            }
+        }
+
+        function prepararEdicao(idIn, idOut, nomeFunc) {
+            mudarAba('edicao');
+            document.getElementById('titulo-modo-edicao').innerText = "Editar Turno Existente";
+            document.getElementById('man-nome').value = nomeFunc;
+            document.getElementById('man-tipo').value = 'shift';
+            document.getElementById('edit-id-in').value = idIn;
+            document.getElementById('edit-id-out').value = idOut;
+            document.getElementById('btn-salvar-texto').innerText = "Atualizar Turno na Base de Dados";
+
+            // Preenche valores se existirem
+            const regIn = registros.find(r => r.id == idIn);
+            const regOut = registros.find(r => r.id == idOut);
+
+            if(regIn) {
+                document.getElementById('man-data1').value = regIn.data_completa.slice(0, 16);
+            }
+            if(regOut) {
+                document.getElementById('man-data2').value = regOut.data_completa.slice(0, 16);
+            }
+            atualizarFormularioManual();
+        }
+
+        // --- RELATÓRIOS ---
+        function gerarRelatorio() {
+            const periodo = document.getElementById('filtro-tempo').value;
+            const painel = document.getElementById('painel-relatorio');
+            painel.style.display = 'block';
             
-            const divFunc = document.getElementById('lista-funcionarios-hist');
-            divFunc.innerHTML = '';
-            nomes.forEach(n =>
+            let titulo = '';
+            const agora = new Date();
+            let dataLimite = new Date();
+
+            if (periodo === 'semanal') {
+                dataLimite.setDate(agora.getDate() - 7);
+                titulo = 'Últimos 7 dias';
+            } else if (periodo === 'quinzenal') {
+                dataLimite.setDate(agora.getDate() - 14);
+                titulo = 'Últimos 14 dias';
+            } else if (periodo === 'mensal') {
+                dataLimite.setDate(1); 
+                dataLimite.setHours(0, 0, 0, 0);
+                titulo = 'Mês Atual';
+            } else {
+                dataLimite.setMonth(agora.getMonth() - 6);
+                titulo = 'Últimos 6 meses';
+            }
+
+            painel.innerHTML = `<h3>Horas Trabalhadas - ${titulo}</h3>`;
+            const totais = {};
+            nomes.forEach(nome => totais[nome] = 0); 
+            const entradasPendentes = {}; 
+
+            const registrosFiltrados = registros.filter(reg => new Date(reg.data_completa) >= dataLimite);
+            const cronologico = [...registrosFiltrados].reverse();
+
+            cronologico.forEach(reg => {
+                if (reg.evento === 'Clock In') {
+                    entradasPendentes[reg.nome] = new Date(reg.data_completa);
+                } else if (reg.evento === 'Clock Out' && entradasPendentes[reg.nome]) {
+                    const saida = new Date(reg.data_completa);
+                    const entrada = entradasPendentes[reg.nome];
+                    const minutos = Math.floor((saida - entrada) / 60000);
+                    totais[reg.nome] += minutos;
+                    entradasPendentes[reg.nome] = null;
+                }
+            });
+
+            nomes.forEach(nome => {
+                const horas = Math.floor(totais[nome] / 60);
+                const minutos = totais[nome] % 60;
+                painel.innerHTML += `<p><strong>${nome}:</strong> ${horas}h ${minutos}m</p>`;
+            });
+        }
+
+        // --- FORMULÁRIO MANUAL & EDIÇÃO ---
+        function atualizarFormularioManual() {
+            const tipo = document.getElementById('man-tipo').value;
+            const grupoData2 = document.getElementById('grupo-data2');
+            const lblData1 = document.getElementById('lbl-data1');
+
+            if (tipo === 'shift') {
+                grupoData2.style.display = 'block';
+                lblData1.innerText = 'Data e Hora de Entrada:';
+            } else {
+                grupoData2.style.display = 'none';
+                lblData1.innerText = tipo === 'in' ? 'Data e Hora do Clock In:' : 'Data e Hora do Clock Out:';
+            }
+        }
+
+        async function salvarRegistroManual() {
+            const idIn = document.getElementById('edit-id-in').value;
+            const idOut = document.getElementById('edit-id-out').value;
+            const nome = document.getElementById('man-nome').value;
+            const tipo = document.getElementById('man-tipo').value;
+            const valData1 = document.getElementById('man-data1').value;
+            const valData2 = document.getElementById('man-data2').value;
+
+            if (!valData1 || (tipo === 'shift' && !valData2)) {
+                alert("Por favor, preencha as datas e horas obrigatórias.");
+                return;
+            }
+
+            const dt1 = new Date(valData1);
+            
+            try {
+                // Se estiver a editar, apaga os antigos antes de inserir os novos
+                if(idIn) await apagarRegistroAPI(idIn);
+                if(idOut) await apagarRegistroAPI(idOut);
+
+                if (tipo === 'shift') {
+                    const dt2 = new Date(valData2);
+                    if (dt2 <= dt1) {
+                        alert("A hora de saída deve ser posterior à hora de entrada.");
+                        return;
+                    }
+                    const minutosTotais = Math.floor((dt2 - dt1) / 60000);
+                    const horas = Math.floor(minutosTotais / 60);
+                    const minutos = minutosTotais % 60;
+                    
+                    await dispararRequisicaoAPI(nome, 'Clock In', dt1.toISOString(), dt1.toLocaleTimeString('pt-BR'), '(Manual)');
+                    await dispararRequisicaoAPI(nome, 'Clock Out', dt2.toISOString(), dt2.toLocaleTimeString('pt-BR'), `(Manual: ${horas}h ${minutos}m)`);
+                } else if (tipo === 'in') {
+                    await dispararRequisicaoAPI(nome, 'Clock In', dt1.toISOString(), dt1.toLocaleTimeString('pt-BR'), '(Ajuste Manual)');
+                } else if (tipo === 'out') {
+                    await dispararRequisicaoAPI(nome, 'Clock Out', dt1.toISOString(), dt1.toLocaleTimeString('pt-BR'), '(Ajuste Manual)');
+                }
+
+                alert("Registo guardado com sucesso!");
+                // Limpa campos de edição
+                document.getElementById('edit-id-in').value = '';
+                document.getElementById('edit-id-out').value = '';
+                document.getElementById('btn-salvar-texto').innerText = "Salvar na Base de Dados";
+                document.getElementById('titulo-modo-edicao').innerText = "Ajuste Manual de Horas";
+                document.getElementById('man-data1').value = '';
+                document.getElementById('man-data2').value = '';
+                
+                await carregarRegistros();
+                mudarAba('ponto');
+            } catch (erro) {
+                alert("Erro ao gravar os ajustes.");
+            }
+        }
+
+        // Inicialização
+        atualizarRelogio();
+        carregarRegistros();
+        setInterval(() => {
+            atualizarRelogio();
+            atualizarContador();
+        }, 1000);
+
+    </script>
+</body>
+</html>
