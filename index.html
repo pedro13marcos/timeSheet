@@ -18,6 +18,10 @@
         #status-msg { margin-bottom: 15px; font-weight: bold; color: #555; }
         #log-ponto { background: #f4f4f4; padding: 15px; border-radius: 5px; min-height: 100px; max-height: 400px; overflow-y: auto; }
         .registro-item { border-bottom: 1px solid #ddd; padding: 8px 0; }
+        
+        /* Novos estilos para o relatório */
+        .btn-relatorio { background-color: #673AB7; color: white; border: none; padding: 12px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 20px; font-size: 16px; }
+        #painel-relatorio { background: #e3f2fd; padding: 15px; border-radius: 5px; margin-top: 20px; display: none; }
     </style>
 </head>
 <body>
@@ -34,15 +38,17 @@
         <button class="btn-ponto" id="btn-out" onclick="registrarPonto('out')" disabled>Clock Out</button>
     </div>
 
-    <h2>Histórico de Registros (Nuvevem)</h2>
+    <h2>Histórico de Registros</h2>
     <div id="log-ponto">Carregando dados...</div>
+
+    <button class="btn-relatorio" onclick="gerarRelatorio()">Gerar Relatório de Horas</button>
+    <div id="painel-relatorio"></div>
 
     <script>
         const nomes = ['Pedro', 'Max', 'Carlos', 'Sanny'];
         let usuarioSelecionado = null;
         let registros = [];
         
-        // Mantém apenas o estado do turno atual no navegador
         let estadoUsuarios = JSON.parse(localStorage.getItem('estadoUsuarios')) || {};
         nomes.forEach(nome => {
             if (!estadoUsuarios[nome]) estadoUsuarios[nome] = { trabalhando: false, horaEntrada: null };
@@ -59,7 +65,6 @@
             atualizarContador();
         }
 
-        // Função para buscar os dados salvos no Vercel Postgres
         async function carregarRegistros() {
             try {
                 const resposta = await fetch('/api/ponto');
@@ -97,7 +102,6 @@
             localStorage.setItem('estadoUsuarios', JSON.stringify(estadoUsuarios));
             renderizarTela();
 
-            // Monta o pacote de dados para enviar ao banco
             const dadosParaSalvar = {
                 nome: usuarioSelecionado,
                 evento: eventoTexto,
@@ -106,14 +110,12 @@
                 resumo: resumoTexto
             };
 
-            // Envia para a API via POST
             try {
                 await fetch('/api/ponto', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(dadosParaSalvar)
                 });
-                // Recarrega a lista para mostrar o novo clique confirmado pelo banco
                 await carregarRegistros();
             } catch (erro) {
                 alert("Erro ao salvar no banco de dados.");
@@ -156,7 +158,6 @@
 
             const divLog = document.getElementById('log-ponto');
             divLog.innerHTML = '';
-            // A API já envia ordenado, não precisamos mais do .reverse()
             registros.forEach(reg => {
                 divLog.innerHTML += `<div class="registro-item">
                     <strong>${reg.nome}</strong> | ${reg.evento} às ${reg.hora_local} ${reg.resumo || ''}
@@ -176,6 +177,42 @@
                     document.getElementById('btn-out').innerText = `Clock Out (${horas}h ${minutos}m)`;
                 }
             }
+        }
+
+        // Nova função matemática de agrupamento e soma
+        function gerarRelatorio() {
+            const painel = document.getElementById('painel-relatorio');
+            painel.style.display = 'block';
+            painel.innerHTML = '<h3>Total de Horas (Registros Carregados)</h3>';
+
+            const totais = {};
+            nomes.forEach(nome => totais[nome] = 0); 
+            const entradasPendentes = {}; 
+
+            // A API entrega os dados do mais recente para o mais antigo.
+            // Invertemos a lista para processar cronologicamente o emparelhamento.
+            const cronologico = [...registros].reverse();
+
+            cronologico.forEach(reg => {
+                if (reg.evento === 'Clock In') {
+                    entradasPendentes[reg.nome] = new Date(reg.data_completa);
+                } else if (reg.evento === 'Clock Out' && entradasPendentes[reg.nome]) {
+                    const saida = new Date(reg.data_completa);
+                    const entrada = entradasPendentes[reg.nome];
+                    
+                    const minutos = Math.floor((saida - entrada) / 60000);
+                    totais[reg.nome] += minutos;
+                    
+                    entradasPendentes[reg.nome] = null; // Limpa para aguardar o próximo turno
+                }
+            });
+
+            // Converte os minutos totais de volta para o formato de Horas e Minutos
+            nomes.forEach(nome => {
+                const horas = Math.floor(totais[nome] / 60);
+                const minutos = totais[nome] % 60;
+                painel.innerHTML += `<p><strong>${nome}:</strong> ${horas}h ${minutos}m trabalhadas</p>`;
+            });
         }
 
         atualizarRelogio();
