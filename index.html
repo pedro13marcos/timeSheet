@@ -135,18 +135,18 @@
             <!-- ABA 2: Criar Escala (Estilo Excel) -->
             <div id="aba-escala" class="aba">
                 <h1>Montar Escala de Turnos</h1>
-                <p>Selecione a semana (Segunda-feira) e preencha os turnos (Ex: <em>12-C</em>, <em>6-C</em>, <em>12-5</em>, <em>OFF</em> ou <em>X</em>).</p>
+                <p>Selecione qualquer dia da semana (o sistema ajustará para a Segunda-feira correspondente) e preencha os turnos (Ex: <em>12-C</em>, <em>6-C</em>, <em>12-5</em>, <em>OFF</em> ou <em>X</em>).</p>
                 
                 <div class="form-manual" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
                     <label style="margin:0; flex: 1; min-width: 200px;">Semana (Início a Segunda):
-                        <input type="date" id="escala-data-inicio" onchange="carregarTabelaEscala()" style="margin-top: 5px;">
+                        <input type="date" id="escala-data-inicio" onchange="aoMudarDataEscala()" style="margin-top: 5px;">
                     </label>
                     <button class="btn-acao" onclick="salvarTabelaEscala()" style="margin:0; width: 200px;">💾 Salvar Escala</button>
                 </div>
 
                 <!-- Ferramenta: Copiar Escala de Outra Semana -->
                 <div class="form-manual" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap; background: #eef2f7;">
-                    <label style="margin:0; flex: 1; min-width: 200px;">Copiar de outra semana (Segunda):
+                    <label style="margin:0; flex: 1; min-width: 200px;">Copiar de outra semana (qualquer dia):
                         <input type="date" id="escala-origem-copia" style="margin-top: 5px;">
                     </label>
                     <button class="btn-acao" onclick="copiarEscalaDeOutraSemana()" style="margin:0; width: 220px; background-color: #3f51b5;">📋 Copiar Escala</button>
@@ -428,7 +428,6 @@
             renderizarTela();
         }
 
-        // Função corrigida: atualiza dados em background sem reescrever a tabela de escala se o utilizador estiver nela
         async function carregarDadosGerais() {
             try {
                 const resPonto = await fetch('/api/ponto');
@@ -625,15 +624,37 @@
         }
 
         // --- LÓGICA DA TABELA DE ESCALA (ESTILO EXCEL) ---
+        function formatarDataLocal(data) {
+            const y = data.getFullYear();
+            const m = String(data.getMonth() + 1).padStart(2, '0');
+            const d = String(data.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function obterSegundaDaSemana(dataStr) {
+            let d = new Date(dataStr + 'T00:00:00');
+            let diaSemana = d.getDay();
+            let diff = d.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1);
+            let segunda = new Date(d.setDate(diff));
+            return formatarDataLocal(segunda);
+        }
+
         function inicializarSeletorEscala() {
             const inputData = document.getElementById('escala-data-inicio');
             if (!inputData.value) {
                 let hoje = new Date();
-                let diaSemana = hoje.getDay();
-                let diff = hoje.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1);
-                let segunda = new Date(hoje.setDate(diff));
-                inputData.value = formatarDataLocal(segunda);
+                inputData.value = obterSegundaDaSemana(formatarDataLocal(hoje));
+            } else {
+                inputData.value = obterSegundaDaSemana(inputData.value);
             }
+            carregarTabelaEscala();
+        }
+
+        function aoMudarDataEscala() {
+            const inputData = document.getElementById('escala-data-inicio');
+            if (!inputData.value) return;
+            // Garante que muda automaticamente para a segunda-feira da semana escolhida
+            inputData.value = obterSegundaDaSemana(inputData.value);
             carregarTabelaEscala();
         }
 
@@ -650,6 +671,17 @@
                 });
             }
             return dias;
+        }
+
+        function normalizarData(dataVal) {
+            if (!dataVal) return '';
+            if (typeof dataVal === 'string') {
+                return dataVal.slice(0, 10);
+            }
+            if (dataVal instanceof Date) {
+                return formatarDataLocal(dataVal);
+            }
+            return formatarDataLocal(new Date(dataVal));
         }
 
         function carregarTabelaEscala() {
@@ -670,8 +702,9 @@
             nomesAtuais.forEach(nome => {
                 html += `<tr><td style="font-weight:bold; background:#f4f4f4;">${nome}</td>`;
                 dias.forEach(d => {
+                    // Procura se já existe escala gravada para preencher automaticamente
                     let esc = escalas.find(e => {
-                        let eData = typeof e.data_turno === 'string' ? e.data_turno.slice(0, 10) : formatarDataLocal(new Date(e.data_turno));
+                        let eData = normalizarData(e.data_turno);
                         return e.nome === nome && eData === d.dataIso;
                     });
                     let val = esc ? esc.turno_texto : 'OFF';
@@ -692,7 +725,9 @@
                 return;
             }
 
-            const diasOrigem = obterDiasDaSemana(dataOrigemStr);
+            // Normaliza origem para segunda-feira também
+            let segundaOrigem = obterSegundaDaSemana(dataOrigemStr);
+            const diasOrigem = obterDiasDaSemana(segundaOrigem);
             const diasDestino = obterDiasDaSemana(dataDestinoStr);
             const nomesAtuais = obterListaNomes();
 
@@ -701,7 +736,7 @@
 
                 nomesAtuais.forEach(nome => {
                     let escOrig = escalas.find(e => {
-                        let eData = typeof e.data_turno === 'string' ? e.data_turno.slice(0, 10) : formatarDataLocal(new Date(e.data_turno));
+                        let eData = normalizarData(e.data_turno);
                         return e.nome === nome && eData === diaOrig.dataIso;
                     });
 
@@ -934,13 +969,6 @@
         }
 
         // --- CALENDÁRIO COM FILTROS E COMPARAÇÃO SEMANAL (SEG-DOM) ---
-        function formatarDataLocal(data) {
-            const y = data.getFullYear();
-            const m = String(data.getMonth() + 1).padStart(2, '0');
-            const d = String(data.getDate()).padStart(2, '0');
-            return `${y}-${m}-${d}`;
-        }
-
         function mudarMes(direcao) {
             dataAtualCal.setMonth(dataAtualCal.getMonth() + direcao);
             montarCalendario();
@@ -989,12 +1017,7 @@
                 if (mostrarAtrib) {
                     const escFunc = escalas.filter(e => e.nome === nome);
                     escFunc.forEach(esc => {
-                        let chaveDia = '';
-                        if (typeof esc.data_turno === 'string') {
-                            chaveDia = esc.data_turno.slice(0, 10);
-                        } else {
-                            chaveDia = formatarDataLocal(new Date(esc.data_turno));
-                        }
+                        let chaveDia = normalizarData(esc.data_turno);
 
                         if (!mapaGeral[chaveDia]) mapaGeral[chaveDia] = {};
                         if (!mapaGeral[chaveDia][nome]) mapaGeral[chaveDia][nome] = { trabalhados: [], atribuidos: [] };
@@ -1094,7 +1117,7 @@
                 let cIso = formatarDataLocal(cursor);
                 let nomeDiaNome = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'][cursor.getDay() === 0 ? 6 : cursor.getDay() - 1];
                 let esc = escalas.find(e => {
-                    let eData = typeof e.data_turno === 'string' ? e.data_turno.slice(0, 10) : formatarDataLocal(new Date(e.data_turno));
+                    let eData = normalizarData(e.data_turno);
                     return e.nome === nomeFunc && eData === cIso;
                 });
                 if (esc) {
@@ -1338,7 +1361,6 @@
         atualizarRelogio();
         carregarDadosGerais();
         
-        // Polling de 5 segundos em background (agora sem interferir enquanto edita escalas)
         setInterval(() => {
             atualizarRelogio();
             atualizarContador();
