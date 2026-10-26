@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Ponto & Escalas</title>
+    <title>Time & Schedule System</title>
     <style>
         body { margin: 0; display: flex; height: 100vh; font-family: sans-serif; background-color: #f9f9f9; }
         
-        /* Menu Lateral Retrátil */
+        /* Collapsible Sidebar */
         #sidebar { width: 250px; background: #2c3e50; color: white; padding: 20px; display: flex; flex-direction: column; gap: 10px; transition: width 0.3s, padding 0.3s; position: relative; }
         #sidebar.recolhido { width: 60px; padding: 20px 10px; }
         #sidebar h2 { margin-top: 0; margin-bottom: 20px; text-align: center; white-space: nowrap; overflow: hidden; }
@@ -18,17 +18,17 @@
         #sidebar.recolhido button span { display: none; }
         .btn-toggle { background: #1a252f !important; text-align: center; justify-content: center !important; font-weight: bold; margin-bottom: 10px; }
 
-        /* Área Central */
+        /* Central Area */
         #conteudo-principal { flex: 1; padding: 30px; overflow-y: auto; background: #fff; display: flex; flex-direction: column; justify-content: space-between; }
         .conteudo-interno { max-width: 1050px; margin: 0 auto; width: 100%; }
         .aba { display: none; }
         .aba.ativa { display: block; }
         
-        /* Rodapé */
+        /* Footer */
         footer { margin-top: 40px; text-align: center; font-size: 13px; color: #666; border-top: 1px solid #eee; padding-top: 15px; }
         footer a { color: #2196F3; text-decoration: none; }
 
-        /* Aba Ponto */
+        /* Clock In/Out Tab */
         #relogio { font-size: 2.5em; font-weight: bold; text-align: center; margin-bottom: 20px; color: #333; }
         .funcionarios { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         .btn-func { padding: 10px 15px; font-size: 16px; border: 1px solid #ccc; background: #fff; cursor: pointer; border-radius: 4px; font-weight: bold; }
@@ -46,7 +46,7 @@
         .btn-relatorio { background-color: #673AB7; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         #painel-relatorio { background: #e3f2fd; padding: 15px; border-radius: 5px; margin-top: 15px; display: none; }
         
-        /* Formulários e Configurações */
+        /* Forms and Settings */
         .form-manual { background: #f4f4f4; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
         .form-manual label { display: block; margin-top: 15px; font-weight: bold; color: #333; }
         .form-manual input, .form-manual select { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
@@ -55,19 +55,16 @@
         
         .usuario-card { background: white; padding: 12px; margin-bottom: 8px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; border-left: 6px solid #ccc; }
 
-        /* Tabela de Escala com Dois Menus Dropdown */
+        /* Schedule Table with Double Dropdowns */
         .tabela-escala { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; text-align: center; }
         .tabela-escala th, .tabela-escala td { border: 1px solid #ccc; padding: 6px; font-size: 13px; vertical-align: middle; }
         .tabela-escala th { background: #2c3e50; color: white; }
         .tabela-escala select { width: 100%; text-align: center; padding: 4px; font-size: 12px; border: 1px solid #ccc; border-radius: 3px; background: white; margin-bottom: 2px; }
 
-        /* Debug Box */
-        #debug-escala-box { background: #263238; color: #80cbc4; padding: 12px; border-radius: 5px; font-family: monospace; font-size: 12px; max-height: 150px; overflow-y: auto; margin-top: 15px; }
-
-        /* Filtros de Calendário */
+        /* Calendar Filters */
         .filtros-calendario { display: flex; gap: 20px; margin-bottom: 15px; background: #eee; padding: 10px; border-radius: 4px; font-size: 14px; font-weight: bold; align-items: center; }
 
-        /* Estilos do Calendário */
+        /* Calendar Styles */
         .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
         .cal-day-name { font-weight: bold; background: #e0e0e0; padding: 10px; border-radius: 4px; }
@@ -76,13 +73,13 @@
         .cal-day.outro-mes { opacity: 0.3; }
         .cal-day-num { font-weight: bold; font-size: 14px; z-index: 2; }
         .cal-badges-container { display: flex; flex-direction: column; gap: 2px; z-index: 2; }
-        .cal-badge { font-size: 10px; color: white; padding: 1px 3px; border-radius: 3px; font-weight: bold; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cal-badge { font-size: 10px; padding: 2px 4px; border-radius: 3px; font-weight: bold; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         
         .legenda-cores { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; font-size: 14px; align-items: center; }
         .legenda-item { display: flex; align-items: center; gap: 5px; }
         .legenda-cor { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
 
-        /* Modal de Detalhes do Dia */
+        /* Day Details Modal */
         #modal-dia { display: none; background: #fff3e0; border: 1px solid #ffb74d; padding: 15px; border-radius: 5px; margin-top: 20px; }
         .btn-acao-mini { background: #d32f2f; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; }
         .btn-editar-mini { background: #1976d2; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; margin-right: 5px; }
@@ -90,199 +87,192 @@
 </head>
 <body>
 
-    <!-- Menu Lateral Retrátil -->
+    <!-- Collapsible Sidebar -->
     <div id="sidebar">
-        <button class="btn-toggle" onclick="alternarSidebar()">☰ <span>Recolher</span></button>
-        <h2>Ponto Web</h2>
-        <button onclick="mudarAba('ponto')">⏰ <span>Bater Ponto</span></button>
-        <button onclick="mudarAba('escala')">📋 <span>Criar Escala</span></button>
-        <button onclick="mudarAba('historico')">📅 <span>Calendário</span></button>
-        <button onclick="mudarAba('relatorios')">📊 <span>Relatórios</span></button>
-        <button onclick="mudarAba('config')">⚙️ <span>Configurações</span></button>
-        <button onclick="mudarAba('edicao')">✏️ <span>Ajuste Manual</span></button>
+        <button class="btn-toggle" onclick="alternarSidebar()">☰ <span>Collapse</span></button>
+        <h2>Time Web</h2>
+        <button onclick="mudarAba('ponto')">⏰ <span>Clock In/Out</span></button>
+        <button onclick="mudarAba('escala')">📋 <span>Create Schedule</span></button>
+        <button onclick="mudarAba('historico')">📅 <span>Calendar</span></button>
+        <button onclick="mudarAba('relatorios')">📊 <span>Reports</span></button>
+        <button onclick="mudarAba('config')">⚙️ <span>Settings</span></button>
+        <button onclick="mudarAba('edicao')">✏️ <span>Manual Adjustment</span></button>
     </div>
 
-    <!-- Área Central -->
+    <!-- Central Area -->
     <div id="conteudo-principal">
         <div class="conteudo-interno">
             
-            <!-- ABA 1: Bater Ponto -->
+            <!-- TAB 1: Clock In/Out -->
             <div id="aba-ponto" class="aba ativa">
-                <h1>Controle de Ponto</h1>
+                <h1>Time Tracking</h1>
                 <div id="relogio">00:00:00</div>
                 
-                <h3>Selecione o Funcionário:</h3>
+                <h3>Select Employee:</h3>
                 <div class="funcionarios" id="lista-funcionarios"></div>
-                <div id="status-msg">Nenhum funcionário selecionado</div>
+                <div id="status-msg">No employee selected</div>
 
                 <div class="botoes-ponto">
                     <button class="btn-ponto" id="btn-in" onclick="registrarPonto('in')" disabled>Clock In</button>
                     <button class="btn-ponto" id="btn-out" onclick="registrarPonto('out')" disabled>Clock Out</button>
                 </div>
 
-                <h2>Últimos 6 Registros</h2>
-                <div id="log-ponto">Carregando dados...</div>
+                <h2>Last 6 Records</h2>
+                <div id="log-ponto">Loading data...</div>
 
                 <div class="area-relatorio">
                     <select id="filtro-tempo">
-                        <option value="6_meses">Últimos 6 Meses</option>
-                        <option value="mensal">Mês Atual</option>
-                        <option value="quinzenal">Últimos 14 dias</option>
-                        <option value="semanal">Últimos 7 dias</option>
+                        <option value="6_meses">Last 6 Months</option>
+                        <option value="mensal">Current Month</option>
+                        <option value="quinzenal">Last 14 days</option>
+                        <option value="semanal">Last 7 days</option>
                     </select>
-                    <button class="btn-relatorio" onclick="gerarRelatorio()">Resumo Rápido</button>
+                    <button class="btn-relatorio" onclick="gerarRelatorio()">Quick Summary</button>
                 </div>
                 <div id="painel-relatorio"></div>
             </div>
 
-            <!-- ABA 2: Criar Escala com Painel de Diagnóstico -->
+            <!-- TAB 2: Create Schedule -->
             <div id="aba-escala" class="aba">
-                <h1>Montar Escala de Turnos</h1>
-                <p>Selecione qualquer dia da semana (o sistema ajustará para a Segunda-feira) e defina individualmente a entrada e a saída.</p>
+                <h1>Build Shift Schedule</h1>
+                <p>Select any day of the week (the system will adjust to Monday) and individually define start and end times.</p>
                 
                 <div class="form-manual" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
-                    <label style="margin:0; flex: 1; min-width: 200px;">Semana (Início a Segunda):
+                    <label style="margin:0; flex: 1; min-width: 200px;">Week (Starts on Monday):
                         <input type="date" id="escala-data-inicio" onchange="aoMudarDataEscala()" style="margin-top: 5px;">
                     </label>
-                    <button class="btn-acao" onclick="salvarTabelaEscala()" style="margin:0; width: 200px;">💾 Salvar Escala</button>
+                    <button class="btn-acao" onclick="salvarTabelaEscala()" style="margin:0; width: 200px;">💾 Save Schedule</button>
                 </div>
 
-                <!-- Ferramenta: Copiar Escala de Outra Semana -->
+                <!-- Tool: Copy Schedule from Another Week -->
                 <div class="form-manual" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap; background: #eef2f7;">
-                    <label style="margin:0; flex: 1; min-width: 200px;">Copiar de outra semana (qualquer dia):
+                    <label style="margin:0; flex: 1; min-width: 200px;">Copy from another week (any day):
                         <input type="date" id="escala-origem-copia" style="margin-top: 5px;">
                     </label>
-                    <button class="btn-acao" onclick="copiarEscalaDeOutraSemana()" style="margin:0; width: 220px; background-color: #3f51b5;">📋 Copiar Escala</button>
+                    <button class="btn-acao" onclick="copiarEscalaDeOutraSemana()" style="margin:0; width: 220px; background-color: #3f51b5;">📋 Copy Schedule</button>
                 </div>
 
                 <div style="overflow-x: auto;">
                     <table class="tabela-escala" id="tabela-escala-grid">
-                        <!-- Gerado via JS com duplos selects -->
+                        <!-- Generated via JS -->
                     </table>
-                </div>
-
-                <!-- Painel de Diagnóstico do Banco (Debug) -->
-                <div style="margin-top: 25px;">
-                    <h3>🔍 Diagnóstico do Banco de Dados (Escalas Salvas)</h3>
-                    <p style="font-size: 13px; color: #666;">Aqui você pode ver o JSON exato retornado pelo servidor (`/api/escala`) para verificar se os dados estão salvos:</p>
-                    <div id="debug-escala-box">A carregar dados do banco...</div>
                 </div>
             </div>
 
-            <!-- ABA 3: Histórico e Calendário Multi-Usuário com Filtros -->
+            <!-- TAB 3: Calendar -->
             <div id="aba-historico" class="aba">
-                <h1>Calendário de Turnos</h1>
+                <h1>Shift Calendar</h1>
                 
-                <h3>Funcionários:</h3>
+                <h3>Employees:</h3>
                 <div class="funcionarios" id="lista-funcionarios-cal"></div>
 
                 <div class="filtros-calendario">
-                    <span>Visualizar:</span>
-                    <label><input type="checkbox" id="filtro-trab" checked onchange="montarCalendario()"> Turnos Trabalhados (Realizados)</label>
-                    <label><input type="checkbox" id="filtro-atrib" checked onchange="montarCalendario()"> Turnos Atribuídos (Escala)</label>
+                    <span>View:</span>
+                    <label><input type="checkbox" id="filtro-trab" checked onchange="montarCalendario()"> Worked Shifts (Actual)</label>
+                    <label><input type="checkbox" id="filtro-atrib" checked onchange="montarCalendario()"> Assigned Shifts (Schedule)</label>
                 </div>
 
                 <div class="legenda-cores" id="legenda-calendario"></div>
 
                 <div class="cal-header">
-                    <button onclick="mudarMes(-1)">◀ Mês Anterior</button>
-                    <h2 id="cal-mes-ano">Mês Ano</h2>
-                    <button onclick="mudarMes(1)">Próximo Mês ▶</button>
+                    <button onclick="mudarMes(-1)">◀ Previous Month</button>
+                    <h2 id="cal-mes-ano">Month Year</h2>
+                    <button onclick="mudarMes(1)">Next Month ▶</button>
                 </div>
 
                 <div class="cal-grid" id="calendario-grid"></div>
 
                 <div id="modal-dia">
-                    <h3 id="modal-titulo">Detalhes do Dia</h3>
+                    <h3 id="modal-titulo">Day Details</h3>
                     <div id="modal-conteudo"></div>
                 </div>
             </div>
 
-            <!-- ABA 4: Relatórios Customizados -->
+            <!-- TAB 4: Reports -->
             <div id="aba-relatorios" class="aba">
-                <h1>Relatórios por Período Específico</h1>
+                <h1>Reports by Specific Period</h1>
                 <div class="form-manual">
-                    <label>Funcionários:</label>
+                    <label>Employees:</label>
                     <div class="funcionarios" id="lista-funcionarios-rel" style="margin-top: 5px;"></div>
 
-                    <label>Data e Hora de Início:</label>
+                    <label>Start Date and Time:</label>
                     <input type="datetime-local" id="rel-custom-inicio">
 
-                    <label>Data e Hora de Fim:</label>
+                    <label>End Date and Time:</label>
                     <input type="datetime-local" id="rel-custom-fim">
 
-                    <button class="btn-acao" onclick="gerarRelatorioCustomizado()">Gerar Relatório Detalhado</button>
+                    <button class="btn-acao" onclick="gerarRelatorioCustomizado()">Generate Detailed Report</button>
                 </div>
 
                 <div id="painel-relatorio-custom" style="margin-top: 20px; display: none;"></div>
             </div>
 
-            <!-- ABA 5: Configurações de Usuários & Fechamentos -->
+            <!-- TAB 5: Settings & Closings -->
             <div id="aba-config" class="aba">
-                <h1>Configurações do Sistema</h1>
+                <h1>System Settings</h1>
                 
                 <div class="form-manual">
-                    <h3>Horários de Fechamento (Closing 'C') por Dia da Semana</h3>
-                    <p style="font-size: 13px; color: #666;">Defina o horário de fechamento até as 03:59 AM (com marcação ND para Next Day).</p>
+                    <h3>Closing Times ('C') by Day of the Week</h3>
+                    <p style="font-size: 13px; color: #666;">Set closing time up to 03:59 AM (with ND for Next Day).</p>
                     <div id="config-fechamentos-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 10px;">
-                        <!-- Gerado via JS -->
+                        <!-- Generated via JS -->
                     </div>
-                    <button class="btn-acao" onclick="salvarFechamentosConfig()">Salvar Horários de Fechamento</button>
+                    <button class="btn-acao" onclick="salvarFechamentosConfig()">Save Closing Times</button>
                 </div>
 
                 <hr style="margin: 30px 0; border: 0; border-top: 1px solid #ddd;">
 
-                <h2>Configuração de Funcionários</h2>
+                <h2>Employee Configuration</h2>
                 <div class="form-manual">
                     <input type="hidden" id="config-edit-index" value="-1">
-                    <label>Nome do Funcionário:</label>
+                    <label>Employee Name:</label>
                     <input type="text" id="config-nome" placeholder="Ex: Ana">
 
-                    <label>Cor Identificadora:</label>
+                    <label>Identifying Color:</label>
                     <input type="color" id="config-cor" value="#3f51b5" style="height: 40px; padding: 2px;">
 
-                    <button class="btn-acao" id="btn-salvar-usuario" onclick="salvarUsuarioConfig()">Adicionar Funcionário</button>
+                    <button class="btn-acao" id="btn-salvar-usuario" onclick="salvarUsuarioConfig()">Add Employee</button>
                 </div>
 
-                <h2>Lista de Funcionários Atuais</h2>
+                <h2>Current Employee List</h2>
                 <div id="lista-config-usuarios"></div>
             </div>
 
-            <!-- ABA 6: Ajuste Manual / Edição -->
+            <!-- TAB 6: Manual Adjustment -->
             <div id="aba-edicao" class="aba">
-                <h1 id="titulo-modo-edicao">Ajuste Manual de Horas</h1>
+                <h1 id="titulo-modo-edicao">Manual Time Adjustment</h1>
                 
                 <div class="form-manual">
                     <input type="hidden" id="edit-id-in" value="">
                     <input type="hidden" id="edit-id-out" value="">
 
-                    <label>Funcionário:</label>
+                    <label>Employee:</label>
                     <select id="man-nome"></select>
 
-                    <label>Tipo de Ajuste:</label>
+                    <label>Adjustment Type:</label>
                     <select id="man-tipo" onchange="atualizarFormularioManual()">
-                        <option value="shift">Turno Completo (In e Out)</option>
-                        <option value="in">Apenas Clock In</option>
-                        <option value="out">Apenas Clock Out</option>
+                        <option value="shift">Full Shift (In and Out)</option>
+                        <option value="in">Clock In Only</option>
+                        <option value="out">Clock Out Only</option>
                     </select>
 
-                    <label id="lbl-data1">Data e Hora de Entrada:</label>
+                    <label id="lbl-data1">Entry Date and Time:</label>
                     <input type="datetime-local" id="man-data1">
 
                     <div id="grupo-data2">
-                        <label>Data e Hora de Saída:</label>
+                        <label>Exit Date and Time:</label>
                         <input type="datetime-local" id="man-data2">
                     </div>
 
-                    <button class="btn-acao" id="btn-salvar-texto" onclick="salvarRegistroManual()">Salvar na Base de Dados</button>
+                    <button class="btn-acao" id="btn-salvar-texto" onclick="salvarRegistroManual()">Save to Database</button>
                 </div>
             </div>
 
         </div>
 
-        <!-- Rodapé com Deploy do GitHub e Informações Pessoais -->
+        <!-- Footer with GitHub Deploy and Personal Info -->
         <footer>
-            Deploy: <strong>v1.2 (Produção GitHub / Vercel)</strong> — Site desenvolvido por <strong>Pedro Marcos</strong> — Contato: <a href="mailto:pedromarcos212@gmail.com">pedromarcos212@gmail.com</a>
+            Deploy: <strong>v1.2 (GitHub / Vercel Production)</strong> — Website developed by <strong>Pedro Marcos</strong> — Contact: <a href="mailto:pedromarcos212@gmail.com">pedromarcos212@gmail.com</a>
         </footer>
     </div>
 
@@ -295,8 +285,8 @@
         ];
 
         let fechamentosConfig = JSON.parse(localStorage.getItem('fechamentosConfig')) || {
-            'Segunda': '23:00', 'Terça': '23:00', 'Quarta': '23:00', 
-            'Quinta': '23:00', 'Sexta': '01:00 ND', 'Sábado': '01:00 ND', 'Domingo': '22:00'
+            'Monday': '23:00', 'Tuesday': '23:00', 'Wednesday': '23:00', 
+            'Thursday': '23:00', 'Friday': '01:00 ND', 'Saturday': '01:00 ND', 'Sunday': '22:00'
         };
 
         const opcoesHorariosFechamento = [
@@ -331,22 +321,30 @@
         }
 
         function salvarFechamentosConfig() {
-            const dias = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+            const dias = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
             dias.forEach(dia => {
                 const sel = document.getElementById(`closing-${dia}`);
                 if(sel) fechamentosConfig[dia] = sel.value;
             });
             localStorage.setItem('fechamentosConfig', JSON.stringify(fechamentosConfig));
-            alert("Horários de fechamento guardados com sucesso!");
+            alert("Closing times saved successfully!");
         }
 
         function renderizarInputsFechamento() {
             const container = document.getElementById('config-fechamentos-grid');
             if(!container) return;
             container.innerHTML = '';
-            const dias = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
-            dias.forEach(dia => {
-                let valorAtual = fechamentosConfig[dia] || '23:00';
+            const dias = [
+                { key: 'Monday', label: 'Monday' },
+                { key: 'Tuesday', label: 'Tuesday' },
+                { key: 'Wednesday', label: 'Wednesday' },
+                { key: 'Thursday', label: 'Thursday' },
+                { key: 'Friday', label: 'Friday' },
+                { key: 'Saturday', label: 'Saturday' },
+                { key: 'Sunday', label: 'Sunday' }
+            ];
+            dias.forEach(d => {
+                let valorAtual = fechamentosConfig[d.key] || '23:00';
                 let optionsHtml = '';
                 opcoesHorariosFechamento.forEach(op => {
                     optionsHtml += `<option value="${op}" ${valorAtual === op ? 'selected' : ''}>${op}</option>`;
@@ -354,8 +352,8 @@
 
                 container.innerHTML += `
                     <div>
-                        <label style="font-size:12px; margin-top:5px;">${dia}:</label>
-                        <select id="closing-${dia}" style="padding:8px; font-size:14px; width:100%; border:1px solid #ccc; border-radius:4px;">
+                        <label style="font-size:12px; margin-top:5px;">${d.label}:</label>
+                        <select id="closing-${d.key}" style="padding:8px; font-size:14px; width:100%; border:1px solid #ccc; border-radius:4px;">
                             ${optionsHtml}
                         </select>
                     </div>
@@ -422,7 +420,7 @@
         function atualizarRelogio() {
             const agora = new Date();
             const relogioEl = document.getElementById('relogio');
-            if(relogioEl) relogioEl.innerText = agora.toLocaleTimeString('pt-BR');
+            if(relogioEl) relogioEl.innerText = agora.toLocaleTimeString('en-US');
         }
 
         function selecionar(nome) {
@@ -467,11 +465,6 @@
                 escalas = []; 
             }
 
-            const debugBox = document.getElementById('debug-escala-box');
-            if (debugBox) {
-                debugBox.innerText = JSON.stringify(escalas, null, 2);
-            }
-
             recalcularEstadosDoBanco();
             renderizarTela();
         }
@@ -494,12 +487,12 @@
             const estado = estadoUsuarios[usuarioSelecionado];
             const agora = new Date();
             const dataIso = agora.toISOString();
-            const horaLocal = agora.toLocaleTimeString('pt-BR');
+            const horaLocal = agora.toLocaleTimeString('en-US');
 
             try {
                 if (tipo === 'in') {
                     if (estado && estado.trabalhando) {
-                        alert("Este funcionário já está em turno.");
+                        alert("This employee is already on shift.");
                         return;
                     }
                     await dispararRequisicaoAPI(usuarioSelecionado, 'Clock In', dataIso, horaLocal, '');
@@ -510,12 +503,12 @@
                     const horas = Math.floor(minutosTotais / 60);
                     const minutos = minutosTotais % 60;
                     
-                    await dispararRequisicaoAPI(usuarioSelecionado, 'Clock Out', dataIso, horaLocal, `(Duração: ${horas}h ${minutos}m)`);
+                    await dispararRequisicaoAPI(usuarioSelecionado, 'Clock Out', dataIso, horaLocal, `(Duration: ${horas}h ${minutos}m)`);
                 }
 
                 await carregarDadosGerais();
             } catch (erro) {
-                alert("Erro ao salvar no servidor.");
+                alert("Error saving to server.");
             }
         }
 
@@ -575,7 +568,7 @@
 
             const legendaCal = document.getElementById('legenda-calendario');
             if (legendaCal) {
-                legendaCal.innerHTML = '<strong>Legenda:</strong>';
+                legendaCal.innerHTML = '<strong>Legend:</strong>';
                 nomesAtuais.forEach(nome => {
                     legendaCal.innerHTML += `<span class="legenda-item"><span class="legenda-cor" style="background:${obterCorFuncionario(nome)}"></span> ${nome}</span>`;
                 });
@@ -621,17 +614,17 @@
             if (usuarioSelecionado && btnIn && btnOut) {
                 const estado = estadoUsuarios[usuarioSelecionado] || { trabalhando: false };
                 if (estado.trabalhando) {
-                    statusMsg.innerText = `Status: ${usuarioSelecionado} está em turno.`;
+                    statusMsg.innerText = `Status: ${usuarioSelecionado} is on shift.`;
                     btnIn.disabled = true;
                     btnOut.disabled = false;
                 } else {
-                    statusMsg.innerText = `Status: ${usuarioSelecionado} fora do turno.`;
+                    statusMsg.innerText = `Status: ${usuarioSelecionado} is off shift.`;
                     btnIn.disabled = false;
                     btnOut.disabled = true;
                     btnOut.innerText = 'Clock Out'; 
                 }
             } else if(statusMsg) {
-                statusMsg.innerText = 'Nenhum funcionário selecionado';
+                statusMsg.innerText = 'No employee selected';
                 if(btnIn) btnIn.disabled = true;
                 if(btnOut) btnOut.disabled = true;
             }
@@ -641,11 +634,11 @@
                 divLog.innerHTML = '';
                 const ultimosSeis = registros.slice(0, 6);
                 if(ultimosSeis.length === 0) {
-                    divLog.innerHTML = '<p style="color:#666; font-size:14px;">Nenhum registro encontrado.</p>';
+                    divLog.innerHTML = '<p style="color:#666; font-size:14px;">No records found.</p>';
                 } else {
                     ultimosSeis.forEach(reg => {
                         divLog.innerHTML += `<div class="registro-item">
-                            <span><strong>${reg.nome}</strong> | ${reg.evento} às ${reg.hora_local} (${new Date(reg.data_completa).toLocaleDateString()}) ${reg.resumo || ''}</span>
+                            <span><strong>${reg.nome}</strong> | ${reg.evento} at ${reg.hora_local} (${new Date(reg.data_completa).toLocaleDateString()}) ${reg.resumo || ''}</span>
                         </div>`;
                     });
                 }
@@ -656,7 +649,7 @@
             }
         }
 
-        // --- LÓGICA DA TABELA DE ESCALA ---
+        // --- SCHEDULE TABLE LOGIC ---
         function formatarDataLocal(data) {
             const y = data.getFullYear();
             const m = String(data.getMonth() + 1).padStart(2, '0');
@@ -698,8 +691,8 @@
                 temp.setDate(d.getDate() + i);
                 dias.push({
                     dataIso: formatarDataLocal(temp),
-                    nomeDia: ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'][i],
-                    dataFormatada: temp.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+                    nomeDia: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][i],
+                    dataFormatada: temp.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' })
                 });
             }
             return dias;
@@ -745,7 +738,7 @@
             const grid = document.getElementById('tabela-escala-grid');
             if(!grid) return;
 
-            let html = `<thead><tr><th>Funcionário</th>`;
+            let html = `<thead><tr><th>Employee</th>`;
             dias.forEach(d => {
                 html += `<th>${d.nomeDia.slice(0,3)}<br>${d.dataFormatada}</th>`;
             });
@@ -806,7 +799,7 @@
             const dataDestinoStr = document.getElementById('escala-data-inicio').value;
             
             if (!dataOrigemStr || !dataDestinoStr) {
-                alert("Por favor, selecione a semana de origem e certifique-se de que a semana de destino está preenchida.");
+                alert("Please select the source week and make sure the destination week is filled in.");
                 return;
             }
 
@@ -850,7 +843,7 @@
                 });
             });
 
-            alert(`Escala copiada com sucesso! Revise os valores e clique em "Salvar Escala".`);
+            alert(`Schedule copied successfully! Review the values and click "Save Schedule".`);
         }
 
         async function salvarTabelaEscala() {
@@ -886,10 +879,10 @@
 
             try {
                 await Promise.all(promessas);
-                alert("Escala salva com sucesso na nuvem!");
+                alert("Schedule saved successfully to the cloud!");
                 await carregarDadosGerais();
             } catch (erro) {
-                alert("Erro ao salvar escala.");
+                alert("Error saving schedule.");
             }
         }
 
@@ -935,8 +928,8 @@
                             <span class="legenda-cor" style="background: ${func.cor}; margin-left: 10px; vertical-align: middle;"></span>
                         </div>
                         <div>
-                            <button class="btn-editar-mini" onclick="prepararEdicaoUsuario(${index})">✏️ Editar</button>
-                            <button class="btn-acao-mini" onclick="removerUsuario(${index})">🗑️ Remover</button>
+                            <button class="btn-editar-mini" onclick="prepararEdicaoUsuario(${index})">✏️ Edit</button>
+                            <button class="btn-acao-mini" onclick="removerUsuario(${index})">🗑️ Remove</button>
                         </div>
                     </div>
                 `;
@@ -948,7 +941,7 @@
             document.getElementById('config-edit-index').value = index;
             document.getElementById('config-nome').value = func.nome;
             document.getElementById('config-cor').value = func.cor;
-            document.getElementById('btn-salvar-usuario').innerText = "Atualizar Funcionário";
+            document.getElementById('btn-salvar-usuario').innerText = "Update Employee";
         }
 
         function salvarUsuarioConfig() {
@@ -957,13 +950,13 @@
             const corInput = document.getElementById('config-cor').value;
 
             if(!nomeInput) {
-                alert("Por favor, insira o nome do funcionário.");
+                alert("Please enter the employee name.");
                 return;
             }
 
             const corExistente = funcionarios.find((f, idx) => f.cor.toLowerCase() === corInput.toLowerCase() && idx !== index);
             if(corExistente) {
-                alert(`Esta cor já está em uso por ${corExistente.nome}. Escolha uma cor única.`);
+                alert(`This color is already in use by ${corExistente.nome}. Choose a unique color.`);
                 return;
             }
 
@@ -972,21 +965,21 @@
             } else {
                 funcionarios[index] = { nome: nomeInput, cor: corInput };
                 document.getElementById('config-edit-index').value = -1;
-                document.getElementById('btn-salvar-usuario').innerText = "Adicionar Funcionário";
+                document.getElementById('btn-salvar-usuario').innerText = "Add Employee";
             }
 
             salvarFuncionariosStorage();
             document.getElementById('config-nome').value = '';
             carregarDadosGerais();
-            alert("Funcionário guardado com sucesso!");
+            alert("Employee saved successfully!");
         }
 
         function removerUsuario(index) {
             if(funcionarios.length <= 1) {
-                alert("Deve manter pelo menos um funcionário no sistema.");
+                alert("You must keep at least one employee in the system.");
                 return;
             }
-            if(confirm(`Tem certeza que deseja remover ${funcionarios[index].nome}?`)) {
+            if(confirm(`Are you sure you want to remove ${funcionarios[index].nome}?`)) {
                 funcionarios.splice(index, 1);
                 salvarFuncionariosStorage();
                 carregarDadosGerais();
@@ -1015,19 +1008,19 @@
             painel.style.display = 'block';
 
             if (!strInicio || !strFim) {
-                alert("Por favor, preencha a data e o horário de início e fim.");
+                alert("Please fill in the start and end date and time.");
                 return;
             }
 
             if (usuariosSelecionadosRel.length === 0) {
-                alert("Selecione pelo menos um funcionário.");
+                alert("Please select at least one employee.");
                 return;
             }
 
             const dtInicio = new Date(strInicio);
             const dtFim = new Date(strFim);
 
-            let htmlResultado = `<h3>Relatório de ${dtInicio.toLocaleString('pt-BR')} até ${dtFim.toLocaleString('pt-BR')}</h3>`;
+            let htmlResultado = `<h3>Report from ${dtInicio.toLocaleString('en-US')} to ${dtFim.toLocaleString('en-US')}</h3>`;
 
             usuariosSelecionadosRel.forEach(nome => {
                 const regsFunc = registros.filter(r => r.nome === nome).sort((a,b) => new Date(a.data_completa) - new Date(b.data_completa));
@@ -1061,17 +1054,17 @@
 
                 htmlResultado += `
                     <div style="background:#e3f2fd; padding:15px; margin-top:10px; border-radius:5px; border-left: 5px solid ${obterCorFuncionario(nome)}">
-                        <p><strong>Funcionário: ${nome}</strong></p>
-                        <p>⏱️ Horas trabalhadas no período: <strong>${h}h ${m}m</strong></p>
-                        <p><strong>Registros Encontrados:</strong></p>
+                        <p><strong>Employee: ${nome}</strong></p>
+                        <p>⏱️ Hours worked in period: <strong>${h}h ${m}m</strong></p>
+                        <p><strong>Records Found:</strong></p>
                 `;
 
                 if (registrosNoPeriodo.length === 0) {
-                    htmlResultado += `<p style="font-size:14px; color:#666;">Nenhum registo de ponto neste intervalo.</p>`;
+                    htmlResultado += `<p style="font-size:14px; color:#666;">No time records in this interval.</p>`;
                 } else {
                     registrosNoPeriodo.forEach(r => {
                         htmlResultado += `<div style="font-size:13px; background:white; padding:6px; margin-top:4px; border-radius:3px;">
-                            📅 ${new Date(r.data_completa).toLocaleString('pt-BR')} - <strong>${r.evento}</strong> ${r.resumo || ''}
+                            📅 ${new Date(r.data_completa).toLocaleString('en-US')} - <strong>${r.evento}</strong> ${r.resumo || ''}
                         </div>`;
                     });
                 }
@@ -1149,14 +1142,14 @@
             if (!grid) return;
 
             grid.innerHTML = '';
-            const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+            const diasSemana = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             diasSemana.forEach(d => {
                 grid.innerHTML += `<div class="cal-day-name">${d}</div>`;
             });
 
             const ano = dataAtualCal.getFullYear();
             const mes = dataAtualCal.getMonth();
-            if(lblMesAno) lblMesAno.innerText = `${dataAtualCal.toLocaleString('pt-BR', { month: 'long' })} de ${ano}`;
+            if(lblMesAno) lblMesAno.innerText = `${dataAtualCal.toLocaleString('en-US', { month: 'long' })} ${ano}`;
 
             const primeiroDiaMes = new Date(ano, mes, 1).getDay();
             const ultimoDiaMes = new Date(ano, mes + 1, 0).getDate();
@@ -1177,17 +1170,19 @@
                 let turnosDoDia = mapaGeral[chaveIso] || {};
                 let funcionariosNoDia = Object.keys(turnosDoDia);
 
+                let funcionariosTrab = funcionariosNoDia.filter(func => turnosDoDia[func].trabalhados && turnosDoDia[func].trabalhados.length > 0);
+
                 let celula = document.createElement('div');
                 celula.className = `cal-day`;
 
-                if (funcionariosNoDia.length === 1) {
-                    let func = funcionariosNoDia[0];
+                if (funcionariosTrab.length === 1) {
+                    let func = funcionariosTrab[0];
                     celula.style.background = obterCorFuncionario(func);
                     celula.style.color = 'white';
-                } else if (funcionariosNoDia.length > 1) {
-                    let qtd = funcionariosNoDia.length;
+                } else if (funcionariosTrab.length > 1) {
+                    let qtd = funcionariosTrab.length;
                     let stops = [];
-                    funcionariosNoDia.forEach((func, idx) => {
+                    funcionariosTrab.forEach((func, idx) => {
                         let cor = obterCorFuncionario(func);
                         let inicio = (idx * (100 / qtd)).toFixed(1);
                         let fim = ((idx + 1) * (100 / qtd)).toFixed(1);
@@ -1195,15 +1190,24 @@
                     });
                     celula.style.background = `linear-gradient(135deg, ${stops.join(', ')})`;
                     celula.style.color = 'white';
+                } else {
+                    celula.style.background = '#f1f1f1';
+                    celula.style.color = '#333';
                 }
 
                 let htmlBadges = '<div class="cal-badges-container">';
                 funcionariosNoDia.forEach(func => {
-                    let badgeTxt = func;
-                    if(turnosDoDia[func].atribuidos && turnosDoDia[func].atribuidos.length > 0) {
-                        badgeTxt += ` (${turnosDoDia[func].atribuidos[0]})`;
+                    let info = turnosDoDia[func];
+                    let temTrab = info.trabalhados && info.trabalhados.length > 0;
+                    let temAtrib = info.atribuidos && info.atribuidos.length > 0;
+                    let cor = obterCorFuncionario(func);
+
+                    if (temTrab) {
+                        htmlBadges += `<div class="cal-badge" style="background: ${cor}; color: white;" title="Worked Shift">🟢 ${func} (Worked)</div>`;
                     }
-                    htmlBadges += `<div class="cal-badge" style="background: rgba(0,0,0,0.3);">${badgeTxt}</div>`;
+                    if (temAtrib) {
+                        htmlBadges += `<div class="cal-badge" style="background: #ffffff; color: ${cor}; border: 1.5px dashed ${cor}; font-weight: bold;" title="Assigned Schedule">📋 ${func}: ${info.atribuidos[0]}</div>`;
+                    }
                 });
                 htmlBadges += '</div>';
 
@@ -1228,7 +1232,7 @@
             let cursor = new Date(segunda);
             while (cursor <= domingo) {
                 let cIso = formatarDataLocal(cursor);
-                let nomeDiaNome = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'][cursor.getDay() === 0 ? 6 : cursor.getDay() - 1];
+                let nomeDiaNome = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][cursor.getDay() === 0 ? 6 : cursor.getDay() - 1];
                 let esc = escalas.find(e => {
                     let eData = normalizarData(e.data_turno);
                     return e.nome === nomeFunc && eData === cIso;
@@ -1263,7 +1267,7 @@
                 atribuidoM: minutosAtribuidos % 60,
                 trabH: Math.floor(minutosTrab / 60),
                 trabM: minutosTrab % 60,
-                periodoStr: `${segunda.toLocaleDateString()} a ${domingo.toLocaleDateString()}`
+                periodoStr: `${segunda.toLocaleDateString()} to ${domingo.toLocaleDateString()}`
             };
         }
 
@@ -1273,11 +1277,11 @@
             const conteudo = document.getElementById('modal-conteudo');
             if(!modal) return;
             modal.style.display = 'block';
-            if(titulo) titulo.innerText = `Comparativo e Turnos em ${dataIso.split('-').reverse().join('/')}`;
+            if(titulo) titulo.innerText = `Comparative and Shifts on ${dataIso.split('-').join('/')}`;
 
             const funcionariosPresentes = Object.keys(turnosDoDia);
             if (funcionariosPresentes.length === 0) {
-                conteudo.innerHTML = `<p>Nenhum registo de turno ou escala neste dia.</p>`;
+                conteudo.innerHTML = `<p>No shift or schedule records on this day.</p>`;
                 return;
             }
 
@@ -1292,40 +1296,40 @@
                 conteudo.innerHTML += `
                     <div style="background:white; padding:12px; margin-bottom:10px; border-radius:4px; border-left: 5px solid ${corFunc}">
                         <p style="margin:0 0 5px 0; font-weight:bold; color:${corFunc}">👤 ${func}</p>
-                        <p style="font-size:13px; margin:3px 0;">📋 <strong>Shift Atribuído (Escala):</strong> ${atribTexto}</p>
+                        <p style="font-size:13px; margin:3px 0;">📋 <strong>Assigned Shift (Schedule):</strong> ${atribTexto}</p>
                 `;
 
                 if (infoTurno.trabalhados && infoTurno.trabalhados.length > 0) {
                     infoTurno.trabalhados.forEach((item, index) => {
-                        let txtIn = item.inTime ? `${item.inTime.hora_local}` : 'Parcial';
-                        let txtOut = item.outTime ? `${item.outTime.hora_local}` : 'Em andamento';
+                        let txtIn = item.inTime ? `${item.inTime.hora_local}` : 'Partial';
+                        let txtOut = item.outTime ? `${item.outTime.hora_local}` : 'In progress';
                         conteudo.innerHTML += `
-                            <p style="font-size:13px; margin:3px 0;">🟢 <strong>Realizado Início:</strong> ${txtIn} | 🔴 <strong>Fim:</strong> ${txtOut}</p>
+                            <p style="font-size:13px; margin:3px 0;">🟢 <strong>Worked In:</strong> ${txtIn} | 🔴 <strong>Out:</strong> ${txtOut}</p>
                             <div>
-                                <button class="btn-editar-mini" onclick="prepararEdicao('${item.idIn}', '${item.idOut}', '${func}')">✏️ Editar</button>
-                                <button class="btn-acao-mini" onclick="excluirTurno('${item.idIn}', '${item.idOut}')">🗑️ Apagar</button>
+                                <button class="btn-editar-mini" onclick="prepararEdicao('${item.idIn}', '${item.idOut}', '${func}')">✏️ Edit</button>
+                                <button class="btn-acao-mini" onclick="excluirTurno('${item.idIn}', '${item.idOut}')">🗑️ Delete</button>
                             </div>
                         `;
                     });
                 } else {
-                    conteudo.innerHTML += `<p style="font-size:13px; color:#666; margin:3px 0;">🟢 Realizado: Nenhum ponto batido neste dia.</p>`;
+                    conteudo.innerHTML += `<p style="font-size:13px; color:#666; margin:3px 0;">🟢 Worked: No time records on this day.</p>`;
                 }
 
                 conteudo.innerHTML += `
                         <hr style="border:0; border-top:1px solid #eee; margin:8px 0;">
-                        <p style="font-size:12px; color:#333; margin:2px 0;">📊 <strong>Total Semanal (${semanaTotais.periodoStr}):</strong></p>
-                        <p style="font-size:12px; margin:2px 0;">• Horas Atribuídas: <strong>${semanaTotais.atribuidoH}h ${semanaTotais.atribuidoM}m</strong></p>
-                        <p style="font-size:12px; margin:2px 0;">• Horas Trabalhadas: <strong>${semanaTotais.trabH}h ${semanaTotais.trabM}m</strong></p>
+                        <p style="font-size:12px; color:#333; margin:2px 0;">📊 <strong>Weekly Total (${semanaTotais.periodoStr}):</strong></p>
+                        <p style="font-size:12px; margin:2px 0;">• Assigned Hours: <strong>${semanaTotais.atribuidoH}h ${semanaTotais.atribuidoM}m</strong></p>
+                        <p style="font-size:12px; margin:2px 0;">• Worked Hours: <strong>${semanaTotais.trabH}h ${semanaTotais.trabM}m</strong></p>
                     </div>
                 `;
             });
         }
 
         async function excluirTurno(idIn, idOut) {
-            if(confirm("Tem certeza que deseja apagar este registo?")) {
+            if(confirm("Are you sure you want to delete this record?")) {
                 if(idIn && idIn !== 'undefined') await apagarRegistroAPI(idIn);
                 if(idOut && idOut !== 'undefined') await apagarRegistroAPI(idOut);
-                alert("Registo apagado com sucesso!");
+                alert("Record deleted successfully!");
                 await carregarDadosGerais();
                 montarCalendario();
                 const modal = document.getElementById('modal-dia');
@@ -1335,12 +1339,12 @@
 
         function prepararEdicao(idIn, idOut, nomeFunc) {
             mudarAba('edicao');
-            document.getElementById('titulo-modo-edicao').innerText = "Editar Turno Existente";
+            document.getElementById('titulo-modo-edicao').innerText = "Edit Existing Shift";
             document.getElementById('man-nome').value = nomeFunc;
             document.getElementById('man-tipo').value = 'shift';
             document.getElementById('edit-id-in').value = idIn;
             document.getElementById('edit-id-out').value = idOut;
-            document.getElementById('btn-salvar-texto').innerText = "Atualizar Turno na Base de Dados";
+            document.getElementById('btn-salvar-texto').innerText = "Update Shift in Database";
 
             const regIn = registros.find(r => r.id == idIn);
             const regOut = registros.find(r => r.id == idOut);
@@ -1365,20 +1369,20 @@
 
             if (periodo === 'semanal') {
                 dataLimite.setDate(agora.getDate() - 7);
-                titulo = 'Últimos 7 dias';
+                titulo = 'Last 7 days';
             } else if (periodo === 'quinzenal') {
                 dataLimite.setDate(agora.getDate() - 14);
-                titulo = 'Últimos 14 dias';
+                titulo = 'Last 14 days';
             } else if (periodo === 'mensal') {
                 dataLimite.setDate(1); 
                 dataLimite.setHours(0, 0, 0, 0);
-                titulo = 'Mês Atual';
+                titulo = 'Current Month';
             } else {
                 dataLimite.setMonth(agora.getMonth() - 6);
-                titulo = 'Últimos 6 meses';
+                titulo = 'Last 6 months';
             }
 
-            painel.innerHTML = `<h3>Horas Trabalhadas - ${titulo}</h3>`;
+            painel.innerHTML = `<h3>Worked Hours - ${titulo}</h3>`;
             const totais = {};
             obterListaNomes().forEach(nome => totais[nome] = 0); 
             const entradasPendentes = {}; 
@@ -1412,10 +1416,10 @@
 
             if (tipo === 'shift') {
                 grupoData2.style.display = 'block';
-                lblData1.innerText = 'Data e Hora de Entrada:';
+                lblData1.innerText = 'Entry Date and Time:';
             } else {
                 grupoData2.style.display = 'none';
-                lblData1.innerText = tipo === 'in' ? 'Data e Hora do Clock In:' : 'Data e Hora do Clock Out:';
+                lblData1.innerText = tipo === 'in' ? 'Clock In Date and Time:' : 'Clock Out Date and Time:';
             }
         }
 
@@ -1428,7 +1432,7 @@
             const valData2 = document.getElementById('man-data2').value;
 
             if (!valData1 || (tipo === 'shift' && !valData2)) {
-                alert("Por favor, preencha as datas e horas obrigatórias.");
+                alert("Please fill in the required dates and times.");
                 return;
             }
 
@@ -1441,33 +1445,33 @@
                 if (tipo === 'shift') {
                     const dt2 = new Date(valData2);
                     if (dt2 <= dt1) {
-                        alert("A hora de saída deve ser posterior à hora de entrada.");
+                        alert("The exit time must be after the entry time.");
                         return;
                     }
                     const minutosTotais = Math.floor((dt2 - dt1) / 60000);
                     const horas = Math.floor(minutosTotais / 60);
                     const minutos = minutosTotais % 60;
                     
-                    await dispararRequisicaoAPI(nome, 'Clock In', dt1.toISOString(), dt1.toLocaleTimeString('pt-BR'), '(Manual)');
-                    await dispararRequisicaoAPI(nome, 'Clock Out', dt2.toISOString(), dt2.toLocaleTimeString('pt-BR'), `(Manual: ${horas}h ${minutos}m)`);
+                    await dispararRequisicaoAPI(nome, 'Clock In', dt1.toISOString(), dt1.toLocaleTimeString('en-US'), '(Manual)');
+                    await dispararRequisicaoAPI(nome, 'Clock Out', dt2.toISOString(), dt2.toLocaleTimeString('en-US'), `(Manual: ${horas}h ${minutos}m)`);
                 } else if (tipo === 'in') {
-                    await dispararRequisicaoAPI(nome, 'Clock In', dt1.toISOString(), dt1.toLocaleTimeString('pt-BR'), '(Ajuste Manual)');
+                    await dispararRequisicaoAPI(nome, 'Clock In', dt1.toISOString(), dt1.toLocaleTimeString('en-US'), '(Manual Adjustment)');
                 } else if (tipo === 'out') {
-                    await dispararRequisicaoAPI(nome, 'Clock Out', dt1.toISOString(), dt1.toLocaleTimeString('pt-BR'), '(Ajuste Manual)');
+                    await dispararRequisicaoAPI(nome, 'Clock Out', dt1.toISOString(), dt1.toLocaleTimeString('en-US'), '(Manual Adjustment)');
                 }
 
-                alert("Registo guardado com sucesso!");
+                alert("Record saved successfully!");
                 document.getElementById('edit-id-in').value = '';
                 document.getElementById('edit-id-out').value = '';
-                document.getElementById('btn-salvar-texto').innerText = "Salvar na Base de Dados";
-                document.getElementById('titulo-modo-edicao').innerText = "Ajuste Manual de Horas";
+                document.getElementById('btn-salvar-texto').innerText = "Save to Database";
+                document.getElementById('titulo-modo-edicao').innerText = "Manual Time Adjustment";
                 document.getElementById('man-data1').value = '';
                 document.getElementById('man-data2').value = '';
                 
                 await carregarDadosGerais();
                 mudarAba('ponto');
             } catch (erro) {
-                alert("Erro ao gravar os ajustes.");
+                alert("Error saving adjustments.");
             }
         }
 
