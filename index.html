@@ -55,11 +55,11 @@
         
         .usuario-card { background: white; padding: 12px; margin-bottom: 8px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; border-left: 6px solid #ccc; }
 
-        /* Tabela de Escala Estilo Excel */
+        /* Tabela de Escala Estilo Excel com Dropdown */
         .tabela-escala { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; text-align: center; }
         .tabela-escala th, .tabela-escala td { border: 1px solid #ccc; padding: 8px; font-size: 14px; }
         .tabela-escala th { background: #2c3e50; color: white; }
-        .tabela-escala input { width: 80px; text-align: center; padding: 6px; font-size: 14px; border: 1px solid #ccc; border-radius: 3px; }
+        .tabela-escala select { width: 95px; text-align: center; padding: 6px; font-size: 14px; border: 1px solid #ccc; border-radius: 3px; background: white; }
 
         /* Filtros de Calendário */
         .filtros-calendario { display: flex; gap: 20px; margin-bottom: 15px; background: #eee; padding: 10px; border-radius: 4px; font-size: 14px; font-weight: bold; align-items: center; }
@@ -132,10 +132,10 @@
                 <div id="painel-relatorio"></div>
             </div>
 
-            <!-- ABA 2: Criar Escala (Estilo Excel) -->
+            <!-- ABA 2: Criar Escala (Estilo Excel com Dropdown) -->
             <div id="aba-escala" class="aba">
                 <h1>Montar Escala de Turnos</h1>
-                <p>Selecione qualquer dia da semana (o sistema ajustará para a Segunda-feira correspondente) e preencha os turnos (Ex: <em>12-C</em>, <em>6-C</em>, <em>12-5</em>, <em>OFF</em> ou <em>X</em>).</p>
+                <p>Selecione qualquer dia da semana (o sistema ajustará automaticamente para a Segunda-feira correspondente) e escolha o turno no menu.</p>
                 
                 <div class="form-manual" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
                     <label style="margin:0; flex: 1; min-width: 200px;">Semana (Início a Segunda):
@@ -154,7 +154,7 @@
 
                 <div style="overflow-x: auto;">
                     <table class="tabela-escala" id="tabela-escala-grid">
-                        <!-- Gerado via JS -->
+                        <!-- Gerado via JS com menus dropdown -->
                     </table>
                 </div>
             </div>
@@ -292,6 +292,11 @@
         const opcoesHorariosFechamento = [
             "21:00", "21:30", "22:00", "22:30", "23:00", "23:30", "23:59",
             "00:00 ND", "00:30 ND", "01:00 ND", "01:30 ND", "02:00 ND", "02:30 ND", "03:00 ND", "03:30 ND", "03:59 ND"
+        ];
+
+        // Opções disponíveis no menu dropdown para montagem da escala
+        const opcoesTurnosEscala = [
+            "OFF", "X", "12 - C", "6 - C", "5 - C", "4 - C", "12 - 6", "12 - 5", "6 - 5"
         ];
 
         let usuarioSelecionado = null;
@@ -623,7 +628,7 @@
             }
         }
 
-        // --- LÓGICA DA TABELA DE ESCALA (ESTILO EXCEL) ---
+        // --- LÓGICA DA TABELA DE ESCALA (COM DROPDOWN / POP-OUT MENU) ---
         function formatarDataLocal(data) {
             const y = data.getFullYear();
             const m = String(data.getMonth() + 1).padStart(2, '0');
@@ -653,7 +658,6 @@
         function aoMudarDataEscala() {
             const inputData = document.getElementById('escala-data-inicio');
             if (!inputData.value) return;
-            // Garante que muda automaticamente para a segunda-feira da semana escolhida
             inputData.value = obterSegundaDaSemana(inputData.value);
             carregarTabelaEscala();
         }
@@ -702,13 +706,27 @@
             nomesAtuais.forEach(nome => {
                 html += `<tr><td style="font-weight:bold; background:#f4f4f4;">${nome}</td>`;
                 dias.forEach(d => {
-                    // Procura se já existe escala gravada para preencher automaticamente
+                    // Verifica se já existe escala gravada para preencher o valor atual
                     let esc = escalas.find(e => {
                         let eData = normalizarData(e.data_turno);
                         return e.nome === nome && eData === d.dataIso;
                     });
-                    let val = esc ? esc.turno_texto : 'OFF';
-                    html += `<td><input type="text" data-nome="${nome}" data-data="${d.dataIso}" value="${val}"></td>`;
+                    let valAtual = esc ? esc.turno_texto.trim() : 'OFF';
+
+                    // Constrói o menu select (dropdown)
+                    let selectHtml = `<select data-nome="${nome}" data-data="${d.dataIso}">`;
+                    opcoesTurnosEscala.forEach(op => {
+                        // Verifica correspondência exata ou flexível (ex: '12-C' vs '12 - C')
+                        let selecionado = (valAtual.replace(/\s+/g, '') === op.replace(/\s+/g, '')) ? 'selected' : '';
+                        selectHtml += `<option value="${op}" ${selecionado}>${op}</option>`;
+                    });
+                    // Se o valor gravado for personalizado e não estiver na lista padrão, adiciona-o temporariamente
+                    if (!opcoesTurnosEscala.some(op => op.replace(/\s+/g, '') === valAtual.replace(/\s+/g, '')) && valAtual !== '') {
+                        selectHtml += `<option value="${valAtual}" selected>${valAtual}</option>`;
+                    }
+                    selectHtml += `</select>`;
+
+                    html += `<td>${selectHtml}</td>`;
                 });
                 html += `</tr>`;
             });
@@ -725,7 +743,6 @@
                 return;
             }
 
-            // Normaliza origem para segunda-feira também
             let segundaOrigem = obterSegundaDaSemana(dataOrigemStr);
             const diasOrigem = obterDiasDaSemana(segundaOrigem);
             const diasDestino = obterDiasDaSemana(dataDestinoStr);
@@ -740,11 +757,11 @@
                         return e.nome === nome && eData === diaOrig.dataIso;
                     });
 
-                    let textoTurno = escOrig ? escOrig.turno_texto : 'OFF';
+                    let textoTurno = escOrig ? escOrig.turno_texto.trim() : 'OFF';
 
-                    const inputDest = document.querySelector(`#tabela-escala-grid input[data-nome="${nome}"][data-data="${diaDest.dataIso}"]`);
-                    if (inputDest) {
-                        inputDest.value = textoTurno;
+                    const selectDest = document.querySelector(`#tabela-escala-grid select[data-nome="${nome}"][data-data="${diaDest.dataIso}"]`);
+                    if (selectDest) {
+                        selectDest.value = textoTurno;
                     }
                 });
             });
@@ -753,13 +770,13 @@
         }
 
         async function salvarTabelaEscala() {
-            const inputs = document.querySelectorAll('#tabela-escala-grid input');
+            const selects = document.querySelectorAll('#tabela-escala-grid select');
             let promessas = [];
 
-            inputs.forEach(input => {
-                const nome = input.getAttribute('data-nome');
-                const data_turno = input.getAttribute('data-data');
-                const turno_texto = input.value.trim();
+            selects.forEach(select => {
+                const nome = select.getAttribute('data-nome');
+                const data_turno = select.getAttribute('data-data');
+                const turno_texto = select.value.trim();
 
                 promessas.push(
                     fetch('/api/escala', {
@@ -1338,7 +1355,7 @@
                     await dispararRequisicaoAPI(nome, 'Clock In', dt1.toISOString(), dt1.toLocaleTimeString('pt-BR'), '(Manual)');
                     await dispararRequisicaoAPI(nome, 'Clock Out', dt2.toISOString(), dt2.toLocaleTimeString('pt-BR'), `(Manual: ${horas}h ${minutos}m)`);
                 } else if (tipo === 'in') {
-                    await dispararRequisicaoAPI(nome, 'Clock In', dt1.toISOString(), dt1.toLocaleTimeString('pt-BR'), '(Ajuste Manual)');
+                    await dispararRequisiqueAPI(nome, 'Clock In', dt1.toISOString(), dt1.toLocaleTimeString('pt-BR'), '(Ajuste Manual)');
                 } else if (tipo === 'out') {
                     await dispararRequisicaoAPI(nome, 'Clock Out', dt1.toISOString(), dt1.toLocaleTimeString('pt-BR'), '(Ajuste Manual)');
                 }
