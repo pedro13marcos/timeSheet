@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Ponto</title>
+    <title>Sistema de Ponto & Escalas</title>
     <style>
         body { margin: 0; display: flex; height: 100vh; font-family: sans-serif; background-color: #f9f9f9; }
         
@@ -20,7 +20,7 @@
 
         /* Área Central */
         #conteudo-principal { flex: 1; padding: 30px; overflow-y: auto; background: #fff; }
-        .aba { display: none; max-width: 800px; margin: 0 auto; }
+        .aba { display: none; max-width: 950px; margin: 0 auto; }
         .aba.ativa { display: block; }
         
         /* Aba Ponto */
@@ -36,7 +36,6 @@
         #log-ponto { background: #f4f4f4; padding: 15px; border-radius: 5px; min-height: 80px; max-height: 200px; overflow-y: auto; margin-bottom: 20px; }
         .registro-item { border-bottom: 1px solid #ddd; padding: 8px 0; display: flex; justify-content: space-between; align-items: center; }
         
-        /* Relatórios rápidos da home */
         .area-relatorio { display: flex; gap: 10px; margin-top: 10px; }
         .area-relatorio select { padding: 10px; font-size: 16px; border-radius: 4px; border: 1px solid #ccc; flex: 1; }
         .btn-relatorio { background-color: #673AB7; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
@@ -51,11 +50,20 @@
         
         .usuario-card { background: white; padding: 12px; margin-bottom: 8px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; border-left: 6px solid #ccc; }
 
+        /* Tabela de Escala Estilo Excel */
+        .tabela-escala { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; text-align: center; }
+        .tabela-escala th, .tabela-escala td { border: 1px solid #ccc; padding: 8px; font-size: 14px; }
+        .tabela-escala th { background: #2c3e50; color: white; }
+        .tabela-escala input { width: 80px; text-align: center; padding: 6px; font-size: 14px; border: 1px solid #ccc; border-radius: 3px; }
+
+        /* Filtros de Calendário */
+        .filtros-calendario { display: flex; gap: 20px; margin-bottom: 15px; background: #eee; padding: 10px; border-radius: 4px; font-size: 14px; font-weight: bold; align-items: center; }
+
         /* Estilos do Calendário */
         .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
         .cal-day-name { font-weight: bold; background: #e0e0e0; padding: 10px; border-radius: 4px; }
-        .cal-day { background: #f1f1f1; min-height: 80px; padding: 5px; border-radius: 4px; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+        .cal-day { background: #f1f1f1; min-height: 85px; padding: 5px; border-radius: 4px; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
         .cal-day:hover { filter: brightness(0.95); }
         .cal-day.outro-mes { opacity: 0.3; }
         .cal-day-num { font-weight: bold; font-size: 14px; z-index: 2; }
@@ -79,6 +87,7 @@
         <button class="btn-toggle" onclick="alternarSidebar()">☰ <span>Recolher</span></button>
         <h2>Ponto Web</h2>
         <button onclick="mudarAba('ponto')">⏰ <span>Bater Ponto</span></button>
+        <button onclick="mudarAba('escala')">📋 <span>Criar Escala</span></button>
         <button onclick="mudarAba('historico')">📅 <span>Calendário</span></button>
         <button onclick="mudarAba('relatorios')">📊 <span>Relatórios</span></button>
         <button onclick="mudarAba('config')">⚙️ <span>Configurações</span></button>
@@ -117,12 +126,36 @@
             <div id="painel-relatorio"></div>
         </div>
 
-        <!-- ABA 2: Histórico e Calendário Multi-Usuário -->
+        <!-- ABA 2: Criar Escala (Estilo Excel) -->
+        <div id="aba-escala" class="aba">
+            <h1>Montar Escala de Turnos</h1>
+            <p>Selecione a semana (Segunda-feira) e preencha os turnos (Ex: <em>12-C</em>, <em>6-C</em>, <em>12-5</em>, <em>OFF</em> ou <em>X</em>).</p>
+            
+            <div class="form-manual" style="display: flex; gap: 15px; align-items: center;">
+                <label style="margin:0;">Semana (Início a Segunda):</label>
+                <input type="date" id="escala-data-inicio" onchange="carregarTabelaEscala()" style="flex: 1; margin:0;">
+                <button class="btn-acao" onclick="salvarTabelaEscala()" style="margin:0; width: 200px;">💾 Salvar Escala</button>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="tabela-escala" id="tabela-escala-grid">
+                    <!-- Gerado via JS -->
+                </table>
+            </div>
+        </div>
+
+        <!-- ABA 3: Histórico e Calendário Multi-Usuário com Filtros -->
         <div id="aba-historico" class="aba">
             <h1>Calendário de Turnos</h1>
             
             <h3>Funcionários:</h3>
             <div class="funcionarios" id="lista-funcionarios-cal"></div>
+
+            <div class="filtros-calendario">
+                <span>Visualizar:</span>
+                <label><input type="checkbox" id="filtro-trab" checked onchange="montarCalendario()"> Turnos Trabalhados (Realizados)</label>
+                <label><input type="checkbox" id="filtro-atrib" checked onchange="montarCalendario()"> Turnos Atribuídos (Escala)</label>
+            </div>
 
             <div class="legenda-cores" id="legenda-calendario"></div>
 
@@ -140,7 +173,7 @@
             </div>
         </div>
 
-        <!-- ABA 3: Relatórios Customizados -->
+        <!-- ABA 4: Relatórios Customizados -->
         <div id="aba-relatorios" class="aba">
             <h1>Relatórios por Período Específico</h1>
             <div class="form-manual">
@@ -159,11 +192,22 @@
             <div id="painel-relatorio-custom" style="margin-top: 20px; display: none;"></div>
         </div>
 
-        <!-- ABA 4: Configurações de Usuários -->
+        <!-- ABA 5: Configurações de Usuários & Fechamentos -->
         <div id="aba-config" class="aba">
-            <h1>Configuração de Funcionários</h1>
-            <p>Adicione, remova ou edite funcionários e atribua cores exclusivas para o calendário e turnos ativos.</p>
+            <h1>Configurações do Sistema</h1>
             
+            <div class="form-manual">
+                <h3>Horários de Fechamento (Closing 'C') por Dia da Semana</h3>
+                <p style="font-size: 13px; color: #666;">Defina a que horas corresponde a letra 'C' quando atribuída na escala.</p>
+                <div id="config-fechamentos-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 10px;">
+                    <!-- Gerado via JS -->
+                </div>
+                <button class="btn-acao" onclick="salvarFechamentosConfig()">Salvar Horários de Fechamento</button>
+            </div>
+
+            <hr style="margin: 30px 0; border: 0; border-top: 1px solid #ddd;">
+
+            <h2>Configuração de Funcionários</h2>
             <div class="form-manual">
                 <input type="hidden" id="config-edit-index" value="-1">
                 <label>Nome do Funcionário:</label>
@@ -179,7 +223,7 @@
             <div id="lista-config-usuarios"></div>
         </div>
 
-        <!-- ABA 5: Ajuste Manual / Edição -->
+        <!-- ABA 6: Ajuste Manual / Edição -->
         <div id="aba-edicao" class="aba">
             <h1 id="titulo-modo-edicao">Ajuste Manual de Horas</h1>
             
@@ -219,16 +263,48 @@
             { nome: 'Sanny', cor: '#009688' }
         ];
 
+        // Horários padrão de Closing (C) para cada dia da semana (0=Segunda, ..., 6=Domingo)
+        let fechamentosConfig = JSON.parse(localStorage.getItem('fechamentosConfig')) || {
+            'Segunda': '23:00', 'Terça': '23:00', 'Quarta': '23:00', 
+            'Quinta': '23:00', 'Sexta': '23:59', 'Sábado': '23:59', 'Domingo': '22:00'
+        };
+
         let usuarioSelecionado = null;
         let usuariosSelecionadosCal = [];
         let usuariosSelecionadosRel = [];
         let registros = [];
+        let escalas = []; // Dados vindos de /api/escala
         
         let dataAtualCal = new Date();
         let estadoUsuarios = {};
 
         function salvarFuncionariosStorage() {
             localStorage.setItem('funcionariosConfig', JSON.stringify(funcionarios));
+        }
+
+        function salvarFechamentosConfig() {
+            const dias = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+            dias.forEach(dia => {
+                const val = document.getElementById(`closing-${dia}`).value;
+                if(val) fechamentosConfig[dia] = val;
+            });
+            localStorage.setItem('fechamentosConfig', JSON.stringify(fechamentosConfig));
+            alert("Horários de fechamento guardados com sucesso!");
+        }
+
+        function renderizarInputsFechamento() {
+            const container = document.getElementById('config-fechamentos-grid');
+            if(!container) return;
+            container.innerHTML = '';
+            const dias = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+            dias.forEach(dia => {
+                container.innerHTML += `
+                    <div>
+                        <label style="font-size:12px; margin-top:5px;">${dia}:</label>
+                        <input type="time" id="closing-${dia}" value="${fechamentosConfig[dia] || '23:00'}">
+                    </div>
+                `;
+            });
         }
 
         function obterListaNomes() {
@@ -240,15 +316,12 @@
             return func ? func.cor : '#607d8b';
         }
 
-        // Calcula o estado atual (trabalhando ou não) diretamente dos registros do banco
         function recalcularEstadosDoBanco() {
             const nomesAtuais = obterListaNomes();
             nomesAtuais.forEach(nome => {
                 estadoUsuarios[nome] = { trabalhando: false, horaEntrada: null };
             });
 
-            // Como os registros vêm ordenados do mais recente para o mais antigo,
-            // o primeiro evento encontrado para cada usuário define o seu estado atual.
             const ultimosEventos = {};
             registros.forEach(reg => {
                 if (!ultimosEventos[reg.nome]) {
@@ -280,6 +353,12 @@
             }
             if(id === 'relatorios' && (usuariosSelecionadosRel.length === 0 || !usuariosSelecionadosRel.every(n => nomesAtuais.includes(n)))) {
                 usuariosSelecionadosRel = [...nomesAtuais];
+            }
+            if(id === 'escala') {
+                inicializarSeletorEscala();
+            }
+            if(id === 'config') {
+                renderizarInputsFechamento();
             }
             renderizarTela();
         }
@@ -316,15 +395,21 @@
             renderizarTela();
         }
 
-        async function carregarRegistros() {
+        async function carregarDadosGerais() {
             try {
-                const resposta = await fetch('/api/ponto');
-                registros = await resposta.json();
-                recalcularEstadosDoBanco(); // Atualiza o estado global com base na base de dados
+                const [resPonto, resEscala] = await Promise.all([
+                    fetch('/api/ponto'),
+                    fetch('/api/escala')
+                ]);
+                registros = await resPonto.json();
+                escalas = await resEscala.json();
+                recalcularEstadosDoBanco();
                 renderizarTela();
+                if(document.getElementById('aba-escala').classList.contains('ativa')) {
+                    carregarTabelaEscala();
+                }
             } catch (erro) {
-                const divLog = document.getElementById('log-ponto');
-                if(divLog) divLog.innerText = "Erro ao carregar os registos.";
+                console.error("Erro ao carregar dados", erro);
             }
         }
 
@@ -350,14 +435,12 @@
 
             try {
                 if (tipo === 'in') {
-                    // Impede duplo clock in se já estiver trabalhando (redundância de segurança)
                     if (estado && estado.trabalhando) {
                         alert("Este funcionário já está em turno.");
                         return;
                     }
                     await dispararRequisicaoAPI(usuarioSelecionado, 'Clock In', dataIso, horaLocal, '');
                 } else if (tipo === 'out') {
-                    // Calcula a duração com base na hora de entrada registada no banco
                     const entradaIso = estado.horaEntrada || dataIso;
                     const entrada = new Date(entradaIso);
                     const minutosTotais = Math.floor((agora - entrada) / 60000);
@@ -367,7 +450,7 @@
                     await dispararRequisicaoAPI(usuarioSelecionado, 'Clock Out', dataIso, horaLocal, `(Duração: ${horas}h ${minutos}m)`);
                 }
 
-                await carregarRegistros();
+                await carregarDadosGerais();
             } catch (erro) {
                 alert("Erro ao salvar no servidor.");
             }
@@ -376,7 +459,6 @@
         function renderizarTela() {
             const nomesAtuais = obterListaNomes();
 
-            // Home: Funcionários (Indicação colorida persistente para quem está em turno)
             const divFunc = document.getElementById('lista-funcionarios');
             if (divFunc) {
                 divFunc.innerHTML = '';
@@ -406,7 +488,6 @@
                 });
             }
 
-            // Calendário: Funcionários
             const divFuncCal = document.getElementById('lista-funcionarios-cal');
             if (divFuncCal) {
                 divFuncCal.innerHTML = '';
@@ -429,7 +510,6 @@
                 });
             }
 
-            // Legenda do Calendário dinâmica
             const legendaCal = document.getElementById('legenda-calendario');
             if (legendaCal) {
                 legendaCal.innerHTML = '<strong>Legenda:</strong>';
@@ -438,7 +518,6 @@
                 });
             }
 
-            // Relatórios: Funcionários
             const divFuncRel = document.getElementById('lista-funcionarios-rel');
             if (divFuncRel) {
                 divFuncRel.innerHTML = '';
@@ -460,7 +539,6 @@
                 });
             }
 
-            // Select de Edição Manual
             const selManNome = document.getElementById('man-nome');
             if (selManNome) {
                 const valAntigo = selManNome.value;
@@ -481,8 +559,8 @@
                 const estado = estadoUsuarios[usuarioSelecionado] || { trabalhando: false };
                 if (estado.trabalhando) {
                     statusMsg.innerText = `Status: ${usuarioSelecionado} está em turno.`;
-                    btnIn.disabled = true;  // Impede novo clock in em qualquer terminal
-                    btnOut.disabled = false; // Permite clock out em qualquer terminal
+                    btnIn.disabled = true;
+                    btnOut.disabled = false;
                 } else {
                     statusMsg.innerText = `Status: ${usuarioSelecionado} fora do turno.`;
                     btnIn.disabled = false;
@@ -495,7 +573,6 @@
                 if(btnOut) btnOut.disabled = true;
             }
 
-            // Histórico recente (Últimos 6)
             const divLog = document.getElementById('log-ponto');
             if (divLog) {
                 divLog.innerHTML = '';
@@ -514,6 +591,110 @@
             if(document.getElementById('aba-historico').classList.contains('ativa')) {
                 montarCalendario();
             }
+        }
+
+        // --- LÓGICA DA TABELA DE ESCALA (ESTILO EXCEL) ---
+        function inicializarSeletorEscala() {
+            const inputData = document.getElementById('escala-data-inicio');
+            if (!inputData.value) {
+                // Seleciona a segunda-feira da semana atual
+                let hoje = new Date();
+                let diaSemana = hoje.getDay();
+                let diff = hoje.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1);
+                let segunda = new Date(hoje.setDate(diff));
+                inputData.value = formatarDataLocal(segunda);
+            }
+            carregarTabelaEscala();
+        }
+
+        function obterDiasDaSemana(dataSegundaStr) {
+            let d = new Date(dataSegundaStr + 'T00:00:00');
+            let dias = [];
+            for (let i = 0; i < 7; i++) {
+                let temp = new Date(d);
+                temp.setDate(d.getDate() + i);
+                dias.push({
+                    dataIso: formatarDataLocal(temp),
+                    nomeDia: ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'][i],
+                    dataFormatada: temp.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+                });
+            }
+            return dias;
+        }
+
+        function carregarTabelaEscala() {
+            const dataSegunda = document.getElementById('escala-data-inicio').value;
+            if(!dataSegunda) return;
+
+            const dias = obterDiasDaSemana(dataSegunda);
+            const nomesAtuais = obterListaNomes();
+            const grid = document.getElementById('tabela-escala-grid');
+
+            let html = `<thead><tr><th>Funcionário</th>`;
+            dias.forEach(d => {
+                html += `<th>${d.nomeDia.slice(0,3)}<br>${d.dataFormatada}</th>`;
+            });
+            html += `</tr></thead><tbody>`;
+
+            nomesAtuais.forEach(nome => {
+                html += `<tr><td style="font-weight:bold; background:#f4f4f4;">${nome}</td>`;
+                dias.forEach(d => {
+                    // Procura se já existe escala gravada
+                    let esc = escalas.find(e => e.nome === nome && e.data_turno.slice(0,10) === d.dataIso);
+                    let val = esc ? esc.turno_texto : 'OFF';
+                    html += `<td><input type="text" data-nome="${nome}" data-data="${d.dataIso}" value="${val}"></td>`;
+                });
+                html += `</tr>`;
+            });
+            html += `</tbody>`;
+            grid.innerHTML = html;
+        }
+
+        async function salvarTabelaEscala() {
+            const inputs = document.querySelectorAll('#tabela-escala-grid input');
+            let promessas = [];
+
+            inputs.forEach(input => {
+                const nome = input.getAttribute('data-nome');
+                const data_turno = input.getAttribute('data-data');
+                const turno_texto = input.value.trim();
+
+                promessas.push(
+                    fetch('/api/escala', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ nome, data_turno, turno_texto })
+                    })
+                );
+            });
+
+            try {
+                await Promise.all(promessas);
+                alert("Escala salva com sucesso na nuvem!");
+                await carregarDadosGerais();
+            } catch (erro) {
+                alert("Erro ao salvar escala.");
+            }
+        }
+
+        // --- CÁLCULO DE HORAS DE ESCALA ---
+        function parseTurnoTexto(turnoTexto, nomeDiaSemana) {
+            if (!turnoTexto || turnoTexto === 'OFF' || turnoTexto === 'X') return 0;
+            // Exemplo: "12 - C" ou "6 - C" ou "12 - 5"
+            let partes = turnoTexto.split('-').map(p => p.trim());
+            if (partes.length !== 2) return 0;
+
+            let hIn = parseInt(partes[0]);
+            let hOut;
+
+            if (partes[1].toUpperCase() === 'C') {
+                let fechamentoStr = fechamentosConfig[nomeDiaSemana] || '23:00';
+                hOut = parseInt(fechamentoStr.split(':')[0]);
+            } else {
+                hOut = parseInt(partes[1]);
+                if (hOut < hIn) hOut += 24; // Turno que cruza meia-noite
+            }
+            return Math.max(0, hOut - hIn);
         }
 
         // --- GESTÃO DE CONFIGURAÇÕES DE UTILIZADORES ---
@@ -558,13 +739,7 @@
 
             const corExistente = funcionarios.find((f, idx) => f.cor.toLowerCase() === corInput.toLowerCase() && idx !== index);
             if(corExistente) {
-                alert(`Esta cor já está a ser utilizada pelo funcionário ${corExistente.nome}. Por favor, escolha uma cor única.`);
-                return;
-            }
-
-            const nomeExistente = funcionarios.find((f, idx) => f.nome.toLowerCase() === nomeInput.toLowerCase() && idx !== index);
-            if(nomeExistente) {
-                alert("Já existe um funcionário com este nome.");
+                alert(`Esta cor já está em uso por ${corExistente.nome}. Escolha uma cor única.`);
                 return;
             }
 
@@ -578,7 +753,7 @@
 
             salvarFuncionariosStorage();
             document.getElementById('config-nome').value = '';
-            carregarRegistros();
+            carregarDadosGerais();
             alert("Funcionário guardado com sucesso!");
         }
 
@@ -590,7 +765,7 @@
             if(confirm(`Tem certeza que deseja remover ${funcionarios[index].nome}?`)) {
                 funcionarios.splice(index, 1);
                 salvarFuncionariosStorage();
-                carregarRegistros();
+                carregarDadosGerais();
             }
         }
 
@@ -628,11 +803,6 @@
 
             const dtInicio = new Date(strInicio);
             const dtFim = new Date(strFim);
-
-            if (dtFim <= dtInicio) {
-                alert("A data/hora final deve ser posterior à data/hora inicial.");
-                return;
-            }
 
             let htmlResultado = `<h3>Relatório de ${dtInicio.toLocaleString('pt-BR')} até ${dtFim.toLocaleString('pt-BR')}</h3>`;
 
@@ -688,7 +858,7 @@
             painel.innerHTML = htmlResultado;
         }
 
-        // --- CALENDÁRIO ---
+        // --- CALENDÁRIO COM FILTROS E COMPARAÇÃO SEMANAL (SEG-DOM) ---
         function formatarDataLocal(data) {
             const y = data.getFullYear();
             const m = String(data.getMonth() + 1).padStart(2, '0');
@@ -703,38 +873,54 @@
 
         function mapearTurnosMultiplos() {
             let mapaGeral = {}; 
+            const mostrarTrab = document.getElementById('filtro-trab').checked;
+            const mostrarAtrib = document.getElementById('filtro-atrib').checked;
 
             usuariosSelecionadosCal.forEach(nome => {
-                const regsFunc = registros.filter(r => r.nome === nome).sort((a,b) => new Date(a.data_completa) - new Date(b.data_completa));
-                let entradaPendente = null;
+                // 1. Mapeia Trabalhados
+                if (mostrarTrab) {
+                    const regsFunc = registros.filter(r => r.nome === nome).sort((a,b) => new Date(a.data_completa) - new Date(b.data_completa));
+                    let entradaPendente = null;
 
-                regsFunc.forEach(reg => {
-                    if (reg.evento === 'Clock In') {
-                        entradaPendente = reg;
-                    } else if (reg.evento === 'Clock Out' && entradaPendente) {
-                        let dtIn = new Date(entradaPendente.data_completa);
-                        let dtOut = new Date(reg.data_completa);
+                    regsFunc.forEach(reg => {
+                        if (reg.evento === 'Clock In') {
+                            entradaPendente = reg;
+                        } else if (reg.evento === 'Clock Out' && entradaPendente) {
+                            let dtIn = new Date(entradaPendente.data_completa);
+                            let dtOut = new Date(reg.data_completa);
 
-                        let cursor = new Date(dtIn.getFullYear(), dtIn.getMonth(), dtIn.getDate());
-                        let fim = new Date(dtOut.getFullYear(), dtOut.getMonth(), dtOut.getDate());
+                            let cursor = new Date(dtIn.getFullYear(), dtIn.getMonth(), dtIn.getDate());
+                            let fim = new Date(dtOut.getFullYear(), dtOut.getMonth(), dtOut.getDate());
 
-                        while (cursor <= fim) {
-                            let chaveDia = formatarDataLocal(cursor);
-                            if (!mapaGeral[chaveDia]) mapaGeral[chaveDia] = {};
-                            if (!mapaGeral[chaveDia][nome]) mapaGeral[chaveDia][nome] = [];
+                            while (cursor <= fim) {
+                                let chaveDia = formatarDataLocal(cursor);
+                                if (!mapaGeral[chaveDia]) mapaGeral[chaveDia] = {};
+                                if (!mapaGeral[chaveDia][nome]) mapaGeral[chaveDia][nome] = { trabalhados: [], atribuidos: [] };
 
-                            mapaGeral[chaveDia][nome].push({
-                                idIn: entradaPendente.id,
-                                idOut: reg.id,
-                                inTime: entradaPendente,
-                                outTime: reg
-                            });
-
-                            cursor.setDate(cursor.getDate() + 1);
+                                mapaGeral[chaveDia][nome].trabalhados.push({
+                                    idIn: entradaPendente.id,
+                                    idOut: reg.id,
+                                    inTime: entradaPendente,
+                                    outTime: reg
+                                });
+                                cursor.setDate(cursor.getDate() + 1);
+                            }
+                            entradaPendente = null;
                         }
-                        entradaPendente = null;
-                    }
-                });
+                    });
+                }
+
+                // 2. Mapeia Atribuídos (Escala)
+                if (mostrarAtrib) {
+                    const escFunc = escalas.filter(e => e.nome === nome);
+                    escFunc.forEach(esc => {
+                        let chaveDia = esc.data_turno.slice(0, 10);
+                        if (!mapaGeral[chaveDia]) mapaGeral[chaveDia] = {};
+                        if (!mapaGeral[chaveDia][nome]) mapaGeral[chaveDia][nome] = { trabalhados: [], atribuidos: [] };
+
+                        mapaGeral[chaveDia][nome].atribuidos.push(esc.turno_texto);
+                    });
+                }
             });
 
             return mapaGeral;
@@ -796,7 +982,11 @@
 
                 let htmlBadges = '<div class="cal-badges-container">';
                 funcionariosNoDia.forEach(func => {
-                    htmlBadges += `<div class="cal-badge" style="background: rgba(0,0,0,0.3);">${func}</div>`;
+                    let badgeTxt = func;
+                    if(turnosDoDia[func].atribuidos.length > 0) {
+                        badgeTxt += ` (${turnosDoDia[func].atribuidos[0]})`;
+                    }
+                    htmlBadges += `<div class="cal-badge" style="background: rgba(0,0,0,0.3);">${badgeTxt}</div>`;
                 });
                 htmlBadges += '</div>';
 
@@ -806,37 +996,110 @@
             }
         }
 
+        // Calcula totais da semana (Segunda a Domingo) para comparação
+        function calcularTotaisSemana(dataIsoStr, nomeFunc) {
+            let d = new Date(dataIsoStr + 'T00:00:00');
+            let diaSemana = d.getDay();
+            let diff = d.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1);
+            let segunda = new Date(d.setDate(diff));
+            let domingo = new Date(segunda);
+            domingo.setDate(segunda.getDate() + 6);
+
+            let segIso = formatarDataLocal(segunda);
+            let domIso = formatarDataLocal(domingo);
+
+            // 1. Horas Atribuídas na Semana
+            let minutosAtribuidos = 0;
+            let cursor = new Date(segunda);
+            while (cursor <= domingo) {
+                let cIso = formatarDataLocal(cursor);
+                let nomeDiaNome = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'][cursor.getDay() === 0 ? 6 : cursor.getDay() - 1];
+                let esc = escalas.find(e => e.nome === nomeFunc && e.data_turno.slice(0,10) === cIso);
+                if (esc) {
+                    minutosAtribuidos += (parseTurnoTexto(esc.turno_texto, nomeDiaNome) * 60);
+                }
+                cursor.setDate(cursor.getDate() + 1);
+            }
+
+            // 2. Horas Trabalhadas na Semana
+            let minutosTrab = 0;
+            const regsFunc = registros.filter(r => r.nome === nomeFunc).sort((a,b) => new Date(a.data_completa) - new Date(b.data_completa));
+            let entradaPendente = null;
+
+            regsFunc.forEach(reg => {
+                if (reg.evento === 'Clock In') {
+                    entradaPendente = reg;
+                } else if (reg.evento === 'Clock Out' && entradaPendente) {
+                    let tIn = new Date(entradaPendente.data_completa);
+                    let tOut = new Date(reg.data_completa);
+                    let tInIso = formatarDataLocal(tIn);
+                    
+                    if (tInIso >= segIso && tInIso <= domIso) {
+                        minutosTrab += Math.floor((tOut - tIn) / 60000);
+                    }
+                    entradaPendente = null;
+                }
+            });
+
+            return {
+                atribuidoH: Math.floor(minutosAtribuidos / 60),
+                atribuidoM: minutosAtribuidos % 60,
+                trabH: Math.floor(minutosTrab / 60),
+                trabM: minutosTrab % 60,
+                periodoStr: `${segunda.toLocaleDateString()} a ${domingo.toLocaleDateString()}`
+            };
+        }
+
         function abrirDetalhesDiaMulti(dataIso, turnosDoDia) {
             const modal = document.getElementById('modal-dia');
             const titulo = document.getElementById('modal-titulo');
             const conteudo = document.getElementById('modal-conteudo');
             modal.style.display = 'block';
-            titulo.innerText = `Turnos em ${dataIso.split('-').reverse().join('/')}`;
+            titulo.innerText = `Comparativo e Turnos em ${dataIso.split('-').reverse().join('/')}`;
 
             const funcionariosPresentes = Object.keys(turnosDoDia);
             if (funcionariosPresentes.length === 0) {
-                conteudo.innerHTML = `<p>Nenhum registo de turno neste dia para os funcionários selecionados.</p>`;
+                conteudo.innerHTML = `<p>Nenhum registo de turno ou escala neste dia.</p>`;
                 return;
             }
 
             conteudo.innerHTML = '';
             funcionariosPresentes.forEach(func => {
                 const corFunc = obterCorFuncionario(func);
-                conteudo.innerHTML += `<p style="margin-top:10px; font-weight:bold; color:${corFunc}">👤 ${func}</p>`;
-                turnosDoDia[func].forEach((item, index) => {
-                    let txtIn = item.inTime ? `${item.inTime.hora_local} (${new Date(item.inTime.data_completa).toLocaleDateString()})` : 'Parcial';
-                    let txtOut = item.outTime ? `${item.outTime.hora_local} (${new Date(item.outTime.data_completa).toLocaleDateString()})` : 'Em andamento';
-                    
-                    conteudo.innerHTML += `
-                        <div style="background:white; padding:8px; margin-bottom:5px; border-radius:4px; border-left: 4px solid ${corFunc}">
-                            <p>Turno #${index+1}</p>
-                            <p style="font-size:13px;">🟢 Início: ${txtIn}</p>
-                            <p style="font-size:13px;">🔴 Fim: ${txtOut}</p>
-                            <button class="btn-editar-mini" onclick="prepararEdicao('${item.idIn}', '${item.idOut}', '${func}')">✏️ Editar</button>
-                            <button class="btn-acao-mini" onclick="excluirTurno('${item.idIn}', '${item.idOut}')">🗑️ Apagar</button>
-                        </div>
-                    `;
-                });
+                const infoTurno = turnosDoDia[func];
+                const semanaTotais = calcularTotaisSemana(dataIso, func);
+
+                let atribTexto = infoTurno.atribuidos.length > 0 ? infoTurno.atribuidos.join(', ') : 'Nenhuma escala atribuída';
+
+                conteudo.innerHTML += `
+                    <div style="background:white; padding:12px; margin-bottom:10px; border-radius:4px; border-left: 5px solid ${corFunc}">
+                        <p style="margin:0 0 5px 0; font-weight:bold; color:${corFunc}">👤 ${func}</p>
+                        <p style="font-size:13px; margin:3px 0;">📋 <strong>Shift Atribuído (Escala):</strong> ${atribTexto}</p>
+                `;
+
+                if (infoTurno.trabalhados.length > 0) {
+                    infoTurno.trabalhados.forEach((item, index) => {
+                        let txtIn = item.inTime ? `${item.inTime.hora_local}` : 'Parcial';
+                        let txtOut = item.outTime ? `${item.outTime.hora_local}` : 'Em andamento';
+                        conteudo.innerHTML += `
+                            <p style="font-size:13px; margin:3px 0;">🟢 <strong>Realizado Início:</strong> ${txtIn} | 🔴 <strong>Fim:</strong> ${txtOut}</p>
+                            <div>
+                                <button class="btn-editar-mini" onclick="prepararEdicao('${item.idIn}', '${item.idOut}', '${func}')">✏️ Editar</button>
+                                <button class="btn-acao-mini" onclick="excluirTurno('${item.idIn}', '${item.idOut}')">🗑️ Apagar</button>
+                            </div>
+                        `;
+                    });
+                } else {
+                    conteudo.innerHTML += `<p style="font-size:13px; color:#666; margin:3px 0;">🟢 Realizado: Nenhum ponto batido neste dia.</p>`;
+                }
+
+                conteudo.innerHTML += `
+                        <hr style="border:0; border-top:1px solid #eee; margin:8px 0;">
+                        <p style="font-size:12px; color:#333; margin:2px 0;">📊 <strong>Total Semanal (${semanaTotais.periodoStr}):</strong></p>
+                        <p style="font-size:12px; margin:2px 0;">• Horas Atribuídas: <strong>${semanaTotais.atribuidoH}h ${semanaTotais.atribuidoM}m</strong></p>
+                        <p style="font-size:12px; margin:2px 0;">• Horas Trabalhadas: <strong>${semanaTotais.trabH}h ${semanaTotais.trabM}m</strong></p>
+                    </div>
+                `;
             });
         }
 
@@ -845,7 +1108,7 @@
                 if(idIn && idIn !== 'undefined') await apagarRegistroAPI(idIn);
                 if(idOut && idOut !== 'undefined') await apagarRegistroAPI(idOut);
                 alert("Registo apagado com sucesso!");
-                await carregarRegistros();
+                await carregarDadosGerais();
                 montarCalendario();
                 document.getElementById('modal-dia').style.display = 'none';
             }
@@ -982,7 +1245,7 @@
                 document.getElementById('man-data1').value = '';
                 document.getElementById('man-data2').value = '';
                 
-                await carregarRegistros();
+                await carregarDadosGerais();
                 mudarAba('ponto');
             } catch (erro) {
                 alert("Erro ao gravar os ajustes.");
@@ -990,17 +1253,12 @@
         }
 
         atualizarRelogio();
-        carregarRegistros();
+        carregarDadosGerais();
         
-        // 1. Relógio e contador rodam fluidamente a cada 1 segundo
         setInterval(() => {
             atualizarRelogio();
             atualizarContador();
-        }, 1000);
-
-        // 2. Sincronização com a base de dados (polling) roda a cada 5 segundos em segundo plano
-        setInterval(() => {
-            carregarRegistros();
+            carregarDadosGerais();
         }, 5000);
 
     </script>
