@@ -467,7 +467,6 @@
                 escalas = []; 
             }
 
-            // Atualiza o painel de debug visual na aba de escala
             const debugBox = document.getElementById('debug-escala-box');
             if (debugBox) {
                 debugBox.innerText = JSON.stringify(escalas, null, 2);
@@ -773,7 +772,6 @@
                         valFim = partes[1];
                     }
 
-                    // Select de Início
                     let selectInHtml = `<select class="sel-in" data-nome="${nome}" data-data="${d.dataIso}" onchange="tratarMudancaInicio(this)">`;
                     opcoesInicio.forEach(op => {
                         let sel = (valIn.replace(/\s+/g, '') === op.replace(/\s+/g, '')) ? 'selected' : '';
@@ -784,7 +782,6 @@
                     }
                     selectInHtml += `</select>`;
 
-                    // Select de Fim
                     let isDisabled = (valIn === 'OFF' || valIn === 'X') ? 'disabled style="opacity:0.5;"' : '';
                     let selectFimHtml = `<select class="sel-fim" data-nome="${nome}" data-data="${d.dataIso}" ${isDisabled}>`;
                     opcoesFim.forEach(op => {
@@ -1415,7 +1412,7 @@
 
             if (tipo === 'shift') {
                 grupoData2.style.display = 'block';
-                lblData1.innerText = 'Data e Hora de Entrada:`;
+                lblData1.innerText = 'Data e Hora de Entrada:';
             } else {
                 grupoData2.style.display = 'none';
                 lblData1.innerText = tipo === 'in' ? 'Data e Hora do Clock In:' : 'Data e Hora do Clock Out:';
