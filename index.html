@@ -222,6 +222,12 @@
             <div id="aba-config" class="aba">
                 <h1>System Settings</h1>
                 <div class="form-manual">
+                    <h3>Push Notifications</h3>
+                    <p style="font-size: 14px; color: #666;">Enable push notifications to receive alerts whenever a weekly schedule is created or updated.</p>
+                    <button class="btn-acao" onclick="inscreverNotificacoesPush()" style="background-color: #27ae60; margin-top: 5px;">🔔 Enable Push Notifications</button>
+                </div>
+                <hr style="margin: 30px 0; border: 0; border-top: 1px solid #ddd;">
+                <div class="form-manual">
                     <h3>Closing Times ('C') by Day of the Week</h3>
                     <div id="config-fechamentos-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 10px;"></div>
                     <button class="btn-acao" onclick="salvarFechamentosConfig()" style="margin-top:15px;">Save Closing Times</button>
@@ -271,7 +277,7 @@
 
         </div>
         <footer>
-            Deploy: <strong>v1.9 (GitHub / Vercel Production)</strong> — Website developed by <strong>Pedro Marcos</strong> using <strong>vibe coding</strong> — Contact: <a href="mailto:pedromarcos212@gmail.com">pedromarcos212@gmail.com</a>
+            Deploy: <strong>v2.0 (GitHub / Vercel Production)</strong> — Website developed by <strong>Pedro Marcos</strong> using <strong>vibe coding</strong> — Contact: <a href="mailto:pedromarcos212@gmail.com">pedromarcos212@gmail.com</a>
         </footer>
     </div>
 
@@ -709,7 +715,54 @@
                     promessas.push(fetch('/api/escala', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: selIn.getAttribute('data-nome'), data_turno: selIn.getAttribute('data-data'), turno_texto: (valIn === 'OFF' || valIn === 'X') ? valIn : `${valIn} - ${valFim}` }) }));
                 });
             });
-            try { await Promise.all(promessas); alert("Schedule saved successfully to the cloud!"); await carregarDadosGerais(false); } catch (e) { alert("Error saving schedule."); }
+            try { 
+                await Promise.all(promessas); 
+                alert("Schedule saved successfully to the cloud!"); 
+                await carregarDadosGerais(false); 
+            } catch (e) { 
+                alert("Error saving schedule."); 
+            }
+        }
+
+        // Função de Inscrição em Push Notifications
+        async function inscreverNotificacoesPush() {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                return alert("Push notifications are not supported by your browser/device.");
+            }
+            try {
+                const registroSw = await navigator.serviceWorker.ready;
+                // Exemplo de chave pública VAPID (substitua pela sua chave do servidor quando configurar)
+                const vapidPublicKey = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U'; 
+                const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
+
+                const subscription = await registroSw.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: convertedVapidKey
+                });
+
+                // Envia a inscrição para a API backend salvar no banco
+                await fetch('/api/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(subscription)
+                });
+
+                alert("Push notifications enabled successfully!");
+            } catch (err) {
+                console.error("Failed to subscribe to push notifications:", err);
+                alert("Could not enable notifications. Please check permissions.");
+            }
+        }
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
         }
 
         function parseTurnoTexto(turnoTexto, nomeDiaSemana) {
