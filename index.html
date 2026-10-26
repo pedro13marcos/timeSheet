@@ -12,9 +12,10 @@
     <link rel="apple-touch-icon" href="/icon-192.png">
 
     <style>
-        body { margin: 0; display: flex; height: 100vh; font-family: sans-serif; background-color: #f9f9f9; }
+        * { box-sizing: border-box; }
+        body { margin: 0; display: flex; height: 100vh; overflow-x: hidden; font-family: sans-serif; background-color: #f9f9f9; width: 100vw; }
         
-        #sidebar { width: 250px; background: #2c3e50; color: white; padding: 20px; display: flex; flex-direction: column; gap: 10px; transition: width 0.3s, padding 0.3s; position: relative; }
+        #sidebar { width: 250px; background: #2c3e50; color: white; padding: 20px; display: flex; flex-direction: column; gap: 10px; transition: width 0.3s, padding 0.3s; position: relative; flex-shrink: 0; }
         #sidebar.recolhido { width: 60px; padding: 20px 10px; }
         
         .sidebar-header { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 20px; white-space: nowrap; overflow: hidden; font-size: 20px; font-weight: bold; }
@@ -23,7 +24,7 @@
         #sidebar.recolhido .sidebar-header { flex-direction: column; padding-top: 10px; gap: 5px; }
         #sidebar.recolhido .sidebar-header span { display: none; }
 
-        #sidebar button { padding: 12px; font-size: 16px; border: none; background: #34495e; color: white; cursor: pointer; text-align: left; border-radius: 4px; white-space: nowrap; overflow: hidden; display: flex; align-items: center; gap: 10px; }
+        #sidebar button { padding: 12px; font-size: 16px; border: none; background: #34495e; color: white; cursor: pointer; text-align: left; border-radius: 4px; white-space: nowrap; overflow: hidden; display: flex; align-items: center; gap: 10px; width: 100%; }
         #sidebar button:hover { background: #415b76; }
         #sidebar.recolhido button { text-align: center; justify-content: center; }
         #sidebar.recolhido button span { display: none; }
@@ -32,7 +33,7 @@
         #btn-install-pwa { background: #27ae60 !important; font-weight: bold; display: none; }
         #btn-install-pwa:hover { background: #2ed573 !important; }
 
-        #conteudo-principal { flex: 1; padding: 30px; overflow-y: auto; background: #fff; display: flex; flex-direction: column; justify-content: space-between; }
+        #conteudo-principal { flex: 1; padding: 20px; overflow-y: auto; overflow-x: hidden; background: #fff; display: flex; flex-direction: column; justify-content: space-between; min-width: 0; }
         .conteudo-interno { max-width: 1100px; margin: 0 auto; width: 100%; }
         .aba { display: none; }
         .aba.ativa { display: block; }
@@ -65,18 +66,20 @@
         
         .usuario-card { background: white; padding: 12px; margin-bottom: 8px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; border-left: 6px solid #ccc; }
 
-        .tabela-escala { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; text-align: center; }
-        .tabela-escala th, .tabela-escala td { border: 1px solid #ccc; padding: 6px; font-size: 13px; vertical-align: middle; transition: background-color 0.3s; }
+        /* Tabela de Escala com Largura Mínima para Garantir Legibilidade e Scroll Horizontal Suave */
+        .tabela-escala-container { width: 100%; overflow-x: auto; margin-top: 15px; border: 1px solid #ddd; border-radius: 4px; background: white; }
+        .tabela-escala { width: 100%; min-width: 680px; border-collapse: collapse; text-align: center; }
+        .tabela-escala th, .tabela-escala td { border: 1px solid #ccc; padding: 8px 6px; font-size: 13px; vertical-align: middle; transition: background-color 0.3s; }
         .tabela-escala th { background: #2c3e50; color: white; }
         
         .tabela-escala th.th-uncovered { background: #d32f2f !important; color: #ffffff !important; font-weight: bold; }
         .tabela-escala td.td-uncovered { background-color: rgba(211, 47, 47, 0.15) !important; border-left: 2px solid #d32f2f !important; border-right: 2px solid #d32f2f !important; }
 
-        .tabela-escala select { width: 100%; text-align: center; padding: 4px; font-size: 12px; border: 1px solid #ccc; border-radius: 3px; background: rgba(255,255,255,0.8); margin-bottom: 2px; }
+        .tabela-escala select { width: 100%; text-align: center; padding: 6px 4px; font-size: 12px; border: 1px solid #ccc; border-radius: 3px; background: rgba(255,255,255,0.9); margin-bottom: 3px; min-width: 75px; }
         .tabela-escala select option:disabled { color: #aaa; font-style: italic; background: #f9f9f9; }
-        .td-total-horas { background-color: rgba(238, 242, 247, 0.7); font-weight: bold; color: #2c3e50; font-size: 14px; }
+        .td-total-horas { background-color: rgba(238, 242, 247, 0.7); font-weight: bold; color: #2c3e50; font-size: 14px; min-width: 70px; }
 
-        .filtros-calendario { display: flex; gap: 20px; margin-bottom: 15px; background: #eee; padding: 10px; border-radius: 4px; font-size: 14px; font-weight: bold; align-items: center; }
+        .filtros-calendario { display: flex; gap: 20px; margin-bottom: 15px; background: #eee; padding: 10px; border-radius: 4px; font-size: 14px; font-weight: bold; align-items: center; flex-wrap: wrap; }
         .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
         .cal-day-name { font-weight: bold; background: #e0e0e0; padding: 10px; border-radius: 4px; }
@@ -169,7 +172,7 @@
                     <button class="btn-acao" onclick="copiarEscalaDeOutraSemana()" style="margin:0; width: 220px; background-color: #3f51b5;">📋 Copy Schedule</button>
                 </div>
 
-                <div style="overflow-x: auto;">
+                <div class="tabela-escala-container">
                     <table class="tabela-escala" id="tabela-escala-grid"></table>
                 </div>
             </div>
@@ -262,7 +265,7 @@
 
         </div>
         <footer>
-            Deploy: <strong>v1.6 (GitHub / Vercel Production)</strong> — Website developed by <strong>Pedro Marcos</strong> using <strong>vibe coding</strong> — Contact: <a href="mailto:pedromarcos212@gmail.com">pedromarcos212@gmail.com</a>
+            Deploy: <strong>v1.7 (GitHub / Vercel Production)</strong> — Website developed by <strong>Pedro Marcos</strong> using <strong>vibe coding</strong> — Contact: <a href="mailto:pedromarcos212@gmail.com">pedromarcos212@gmail.com</a>
         </footer>
     </div>
 
@@ -370,7 +373,7 @@
 
         function atualizarRelogio() {
             const relogioEl = document.getElementById('relogio');
-            if(relogioEl) relogioEl.innerText = new Date().toLocaleTimeString('en-US');
+            if(relogioEl) relogioEl.innerText = new Date().toLocaleTimeString('en-GB');
         }
 
         function selecionar(nome) { usuarioSelecionado = nome; renderizarTela(); atualizarContador(); }
@@ -399,7 +402,7 @@
 
         async function registrarPonto(tipo) {
             if (!usuarioSelecionado) return;
-            const estado = estadoUsuarios[usuarioSelecionado], agora = new Date(), dataIso = agora.toISOString(), horaLocal = agora.toLocaleTimeString('en-US');
+            const estado = estadoUsuarios[usuarioSelecionado], agora = new Date(), dataIso = agora.toISOString(), horaLocal = agora.toLocaleTimeString('en-GB');
             try {
                 if (tipo === 'in') {
                     if (estado && estado.trabalhando) return alert("This employee is already on shift.");
@@ -479,14 +482,24 @@
             const divLog = document.getElementById('log-ponto');
             if (divLog) {
                 divLog.innerHTML = registros.length === 0 ? '<p style="color:#666; font-size:14px;">No records found.</p>' :
-                registros.slice(0, 6).map(reg => `<div class="registro-item"><span><strong>${reg.nome}</strong> | ${reg.evento} at ${reg.hora_local} (${new Date(reg.data_completa).toLocaleDateString()}) ${reg.resumo || ''}</span></div>`).join('');
+                registros.slice(0, 6).map(reg => `<div class="registro-item"><span><strong>${reg.nome}</strong> | ${reg.evento} at ${reg.hora_local} (${new Date(reg.data_completa).toLocaleDateString('en-GB')}) ${reg.resumo || ''}</span></div>`).join('');
             }
 
             if(document.getElementById('aba-historico').classList.contains('ativa')) montarCalendario();
             if(reconstruirGrade && document.getElementById('aba-escala').classList.contains('ativa')) carregarTabelaEscala();
         }
 
-        function formatarDataLocal(data) { return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`; }
+        // Formatação DD/MM/YYYY
+        function formatarDataLocal(data) {
+            return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`;
+        }
+
+        function formatarDataBR(dataIso) {
+            if (!dataIso) return '';
+            let partes = dataIso.slice(0, 10).split('-');
+            if (partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`;
+            return dataIso;
+        }
 
         function obterSegundaDaSemana(dataStr) {
             let d = new Date(dataStr + 'T00:00:00'), dia = d.getDay();
@@ -508,7 +521,7 @@
             let d = new Date(dataSegundaStr + 'T00:00:00'), dias = [];
             for (let i = 0; i < 7; i++) {
                 let temp = new Date(d); temp.setDate(d.getDate() + i);
-                dias.push({ dataIso: formatarDataLocal(temp), nomeDia: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][i], dataFormatada: temp.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) });
+                dias.push({ dataIso: formatarDataLocal(temp), nomeDia: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][i], dataFormatada: temp.toLocaleDateString('en-GB', { month: '2-digit', day: '2-digit' }) });
             }
             return dias;
         }
@@ -635,7 +648,7 @@
             const dias = obterDiasDaSemana(dataSegunda), nomesAtuais = obterListaNomes(), grid = document.getElementById('tabela-escala-grid');
             if(!grid) return;
 
-            let html = `<thead><tr><th>Employee</th>` + dias.map((d, i) => `<th data-day-idx="${i}">${d.nomeDia.slice(0,3)}<br>${d.dataFormatada}</th>`).join('') + `<th>Total Hours</th></tr></thead><tbody>`;
+            let html = `<thead><tr><th style="min-width: 90px;">Employee</th>` + dias.map((d, i) => `<th data-day-idx="${i}" style="min-width: 85px;">${d.nomeDia.slice(0,3)}<br>${d.dataFormatada}</th>`).join('') + `<th style="min-width: 75px;">Total Hours</th></tr></thead><tbody>`;
 
             nomesAtuais.forEach(nome => {
                 const corHex = obterCorFuncionario(nome);
@@ -801,7 +814,7 @@
             ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].forEach(d => { grid.innerHTML += `<div class="cal-day-name">${d}</div>`; });
 
             const ano = dataAtualCal.getFullYear(), mes = dataAtualCal.getMonth();
-            if(lblMesAno) lblMesAno.innerText = `${dataAtualCal.toLocaleString('en-US', { month: 'long' })} ${ano}`;
+            if(lblMesAno) lblMesAno.innerText = `${dataAtualCal.toLocaleString('en-GB', { month: 'long' })} ${ano}`;
 
             let primeiroDiaSemana = new Date(ano, mes, 1).getDay(), offsetSegunda = (primeiroDiaSemana === 0) ? 6 : primeiroDiaSemana - 1;
             const ultimoDiaMes = new Date(ano, mes + 1, 0).getDate(), ultimoDiaMesAnterior = new Date(ano, mes, 0).getDate();
@@ -872,14 +885,14 @@
             return {
                 atribuidoH: Math.floor(minutosAtribuidos / 60), atribuidoM: minutosAtribuidos % 60,
                 trabH: Math.floor(minutosTrab / 60), trabM: minutosTrab % 60,
-                periodoStr: `${segunda.toLocaleDateString()} to ${domingo.toLocaleDateString()}`
+                periodoStr: `${formatarDataBR(segIso)} to ${formatarDataBR(domIso)}`
             };
         }
 
         function abrirDetalhesDiaMulti(dataIso, turnosDoDia) {
             const modal = document.getElementById('modal-dia'), conteudo = document.getElementById('modal-conteudo');
             if(!modal) return;
-            modal.style.display = 'block'; document.getElementById('modal-titulo').innerText = `Comparative and Shifts on ${dataIso.split('-').join('/')}`;
+            modal.style.display = 'block'; document.getElementById('modal-titulo').innerText = `Comparative and Shifts on ${formatarDataBR(dataIso)}`;
 
             const funcionariosPresentes = Object.keys(turnosDoDia);
             if (funcionariosPresentes.length === 0) { conteudo.innerHTML = `<p>No shift or schedule records on this day.</p>`; return; }
@@ -960,7 +973,7 @@
             const excluidosNoPeriodo = registrosExcluidos.filter(r => new Date(r.deleted_at || r.data_completa) >= dataLimite);
             if (excluidosNoPeriodo.length > 0) {
                 painel.innerHTML += `<div class="deleted-box"><p style="margin:0 0 5px 0; font-weight:bold; color:#c62828;">🗑️ Deleted Records Summary (${excluidosNoPeriodo.length} deleted item/s):</p>` + 
-                excluidosNoPeriodo.map(del => `<div class="deleted-item">❌ <strong>${del.nome}</strong>: ${del.evento} originally at ${new Date(del.data_completa).toLocaleString('en-US')} ${del.resumo || ''} — <em>Deleted on: ${del.deleted_at ? new Date(del.deleted_at).toLocaleString('en-US') : 'Unknown'}</em></div>`).join('') + `</div>`;
+                excluidosNoPeriodo.map(del => `<div class="deleted-item">❌ <strong>${del.nome}</strong>: ${del.evento} originally at ${new Date(del.data_completa).toLocaleString('en-GB')} ${del.resumo || ''} — <em>Deleted on: ${del.deleted_at ? new Date(del.deleted_at).toLocaleString('en-GB') : 'Unknown'}</em></div>`).join('') + `</div>`;
             }
         }
 
@@ -971,7 +984,7 @@
             if (usuariosSelecionadosRel.length === 0) return alert("Please select at least one employee.");
 
             const dtInicio = new Date(strInicio), dtFim = new Date(strFim);
-            let htmlResultado = `<h3>Report from ${dtInicio.toLocaleString('en-US')} to ${dtFim.toLocaleString('en-US')}</h3>`;
+            let htmlResultado = `<h3>Report from ${dtInicio.toLocaleString('en-GB')} to ${dtFim.toLocaleString('en-GB')}</h3>`;
 
             usuariosSelecionadosRel.forEach(nome => {
                 let minutosTotais = 0, registrosNoPeriodo = [], entradaPendente = null;
@@ -994,18 +1007,17 @@
                         <p><strong>Employee: ${nome}</strong></p><p>⏱️ Hours worked in period: <strong>${Math.floor(minutosTotais / 60)}h ${minutosTotais % 60}m</strong></p><p><strong>Active Records Found:</strong></p>`;
 
                 htmlResultado += registrosNoPeriodo.length === 0 ? `<p style="font-size:14px; color:#666;">No time records in this interval.</p>` :
-                    registrosNoPeriodo.map(r => `<div style="font-size:13px; background:white; padding:6px; margin-top:4px; border-radius:3px;">📅 ${new Date(r.data_completa).toLocaleString('en-US')} - <strong>${r.evento}</strong> ${r.resumo || ''}</div>`).join('');
+                    registrosNoPeriodo.map(r => `<div style="font-size:13px; background:white; padding:6px; margin-top:4px; border-radius:3px;">📅 ${new Date(r.data_completa).toLocaleString('en-GB')} - <strong>${r.evento}</strong> ${r.resumo || ''}</div>`).join('');
 
                 if (excluidosFunc.length > 0) {
                     htmlResultado += `<div class="deleted-box"><p style="margin:0 0 5px 0; font-weight:bold; color:#c62828;">🗑️ Deleted Records Log (${excluidosFunc.length} deleted item/s):</p>` + 
-                    excluidosFunc.map(del => `<div class="deleted-item">❌ <strong>${del.evento}</strong> originally at ${new Date(del.data_completa).toLocaleString('en-US')} ${del.resumo || ''} — <em>Deleted on: ${del.deleted_at ? new Date(del.deleted_at).toLocaleString('en-US') : 'Unknown'}</em></div>`).join('') + `</div>`;
+                    excluidosFunc.map(del => `<div class="deleted-item">❌ <strong>${del.evento}</strong> originally at ${new Date(del.data_completa).toLocaleString('en-GB')} ${del.resumo || ''} — <em>Deleted on: ${del.deleted_at ? new Date(del.deleted_at).toLocaleString('en-GB') : 'Unknown'}</em></div>`).join('') + `</div>`;
                 }
                 htmlResultado += `</div>`;
             });
             painel.innerHTML = htmlResultado;
         }
 
-        // ATUALIZADO: Mostra ou oculta dinamicamente os campos com base na seleção
         function atualizarFormularioManual() {
             const tipo = document.getElementById('man-tipo').value;
             const grupoData1 = document.getElementById('grupo-data1');
@@ -1023,7 +1035,6 @@
             } else if (tipo === 'out') {
                 grupoData1.style.display = 'none';
                 grupoData2.style.display = 'block';
-                // Usamos o campo data2 para guardar a data de saída quando for apenas 'out'
             }
         }
 
@@ -1047,14 +1058,14 @@
                     const dt1 = new Date(valData1), dt2 = new Date(valData2);
                     if (dt2 <= dt1) return alert("The exit time must be after the entry time.");
                     const minTotais = Math.floor((dt2 - dt1) / 60000);
-                    await dispararRequisicaoAPI(nome, 'Clock In', dt1.toISOString(), dt1.toLocaleTimeString('en-US'), '(Manual)');
-                    await dispararRequisicaoAPI(nome, 'Clock Out', dt2.toISOString(), dt2.toLocaleTimeString('en-US'), `(Manual: ${Math.floor(minTotais/60)}h ${minTotais%60}m)`);
+                    await dispararRequisicaoAPI(nome, 'Clock In', dt1.toISOString(), dt1.toLocaleTimeString('en-GB'), '(Manual)');
+                    await dispararRequisicaoAPI(nome, 'Clock Out', dt2.toISOString(), dt2.toLocaleTimeString('en-GB'), `(Manual: ${Math.floor(minTotais/60)}h ${minTotais%60}m)`);
                 } else if (tipo === 'in') {
                     const dt1 = new Date(valData1);
-                    await dispararRequisicaoAPI(nome, 'Clock In', dt1.toISOString(), dt1.toLocaleTimeString('en-US'), '(Manual Adjustment)');
+                    await dispararRequisicaoAPI(nome, 'Clock In', dt1.toISOString(), dt1.toLocaleTimeString('en-GB'), '(Manual Adjustment)');
                 } else if (tipo === 'out') {
                     const dt2 = new Date(valData2);
-                    await dispararRequisicaoAPI(nome, 'Clock Out', dt2.toISOString(), dt2.toLocaleTimeString('en-US'), '(Manual Adjustment)');
+                    await dispararRequisicaoAPI(nome, 'Clock Out', dt2.toISOString(), dt2.toLocaleTimeString('en-GB'), '(Manual Adjustment)');
                 }
 
                 alert("Record saved successfully!");
