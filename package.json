@@ -19,6 +19,9 @@
   },
   "homepage": "https://github.com/pedro13marcos/timeSheet#readme",
   "dependencies": {
-    "@vercel/postgres": "^0.10.0"
-  }
+    "@vercel/postgres": "^0.10.0",
+    "web-push": "^3.6.6"
+}
+
+  
 }
