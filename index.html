@@ -20,7 +20,7 @@
 
         /* Área Central */
         #conteudo-principal { flex: 1; padding: 30px; overflow-y: auto; background: #fff; display: flex; flex-direction: column; justify-content: space-between; }
-        .conteudo-interno { max-width: 950px; margin: 0 auto; width: 100%; }
+        .conteudo-interno { max-width: 1050px; margin: 0 auto; width: 100%; }
         .aba { display: none; }
         .aba.ativa { display: block; }
         
@@ -55,11 +55,11 @@
         
         .usuario-card { background: white; padding: 12px; margin-bottom: 8px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; border-left: 6px solid #ccc; }
 
-        /* Tabela de Escala Estilo Excel com Dropdown */
+        /* Tabela de Escala com Dois Menus Dropdown */
         .tabela-escala { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; text-align: center; }
-        .tabela-escala th, .tabela-escala td { border: 1px solid #ccc; padding: 8px; font-size: 14px; }
+        .tabela-escala th, .tabela-escala td { border: 1px solid #ccc; padding: 6px; font-size: 13px; vertical-align: middle; }
         .tabela-escala th { background: #2c3e50; color: white; }
-        .tabela-escala select { width: 95px; text-align: center; padding: 6px; font-size: 14px; border: 1px solid #ccc; border-radius: 3px; background: white; }
+        .tabela-escala select { width: 100%; text-align: center; padding: 4px; font-size: 12px; border: 1px solid #ccc; border-radius: 3px; background: white; margin-bottom: 2px; }
 
         /* Filtros de Calendário */
         .filtros-calendario { display: flex; gap: 20px; margin-bottom: 15px; background: #eee; padding: 10px; border-radius: 4px; font-size: 14px; font-weight: bold; align-items: center; }
@@ -132,10 +132,10 @@
                 <div id="painel-relatorio"></div>
             </div>
 
-            <!-- ABA 2: Criar Escala (Estilo Excel com Dropdown) -->
+            <!-- ABA 2: Criar Escala (Dois Dropdowns: Início e Fim) -->
             <div id="aba-escala" class="aba">
                 <h1>Montar Escala de Turnos</h1>
-                <p>Selecione qualquer dia da semana (o sistema ajustará automaticamente para a Segunda-feira correspondente) e escolha o turno no menu.</p>
+                <p>Selecione qualquer dia da semana (o sistema ajustará para a Segunda-feira) e defina individualmente a entrada e a saída.</p>
                 
                 <div class="form-manual" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
                     <label style="margin:0; flex: 1; min-width: 200px;">Semana (Início a Segunda):
@@ -154,7 +154,7 @@
 
                 <div style="overflow-x: auto;">
                     <table class="tabela-escala" id="tabela-escala-grid">
-                        <!-- Gerado via JS com menus dropdown -->
+                        <!-- Gerado via JS com duplos selects -->
                     </table>
                 </div>
             </div>
@@ -294,9 +294,19 @@
             "00:00 ND", "00:30 ND", "01:00 ND", "01:30 ND", "02:00 ND", "02:30 ND", "03:00 ND", "03:30 ND", "03:59 ND"
         ];
 
-        // Opções disponíveis no menu dropdown para montagem da escala
-        const opcoesTurnosEscala = [
-            "OFF", "X", "12 - C", "6 - C", "5 - C", "4 - C", "12 - 6", "12 - 5", "6 - 5"
+        // Opções para o Horário de Início (a cada 1 hora + OFF / X)
+        const opcoesInicio = [
+            "OFF", "X", "00:00", "01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00", 
+            "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", 
+            "17:00", "18:00", "19:00", "20:00", "21:00", "22:00", "23:00"
+        ];
+
+        // Opções para o Horário de Fim (inclui Closing 'C' e horários ND até 03:59)
+        const opcoesFim = [
+            "---", "C", "00:00", "01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00", 
+            "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", 
+            "17:00", "18:00", "19:00", "20:00", "21:00", "22:00", "23:00", 
+            "00:00 ND", "01:00 ND", "02:00 ND", "03:00 ND", "03:59 ND"
         ];
 
         let usuarioSelecionado = null;
@@ -628,7 +638,7 @@
             }
         }
 
-        // --- LÓGICA DA TABELA DE ESCALA (COM DROPDOWN / POP-OUT MENU) ---
+        // --- LÓGICA DA TABELA DE ESCALA (COM DUPLOS DROPDOWNS) ---
         function formatarDataLocal(data) {
             const y = data.getFullYear();
             const m = String(data.getMonth() + 1).padStart(2, '0');
@@ -688,6 +698,26 @@
             return formatarDataLocal(new Date(dataVal));
         }
 
+        function tratarMudancaInicio(selectIn) {
+            let val = selectIn.value;
+            let nome = selectIn.getAttribute('data-nome');
+            let data = selectIn.getAttribute('data-data');
+            let selectFim = document.querySelector(`.sel-fim[data-nome="${nome}"][data-data="${data}"]`);
+            if (selectFim) {
+                if (val === 'OFF' || val === 'X') {
+                    selectFim.value = '---';
+                    selectFim.disabled = true;
+                    selectFim.style.opacity = '0.5';
+                } else {
+                    selectFim.disabled = false;
+                    selectFim.style.opacity = '1';
+                    if (selectFim.value === '---') {
+                        selectFim.value = 'C';
+                    }
+                }
+            }
+        }
+
         function carregarTabelaEscala() {
             const dataSegunda = document.getElementById('escala-data-inicio').value;
             if(!dataSegunda) return;
@@ -706,27 +736,48 @@
             nomesAtuais.forEach(nome => {
                 html += `<tr><td style="font-weight:bold; background:#f4f4f4;">${nome}</td>`;
                 dias.forEach(d => {
-                    // Verifica se já existe escala gravada para preencher o valor atual
                     let esc = escalas.find(e => {
                         let eData = normalizarData(e.data_turno);
                         return e.nome === nome && eData === d.dataIso;
                     });
-                    let valAtual = esc ? esc.turno_texto.trim() : 'OFF';
+                    
+                    let turnoTexto = esc ? esc.turno_texto.trim() : 'OFF';
+                    let valIn = 'OFF';
+                    let valFim = '---';
 
-                    // Constrói o menu select (dropdown)
-                    let selectHtml = `<select data-nome="${nome}" data-data="${d.dataIso}">`;
-                    opcoesTurnosEscala.forEach(op => {
-                        // Verifica correspondência exata ou flexível (ex: '12-C' vs '12 - C')
-                        let selecionado = (valAtual.replace(/\s+/g, '') === op.replace(/\s+/g, '')) ? 'selected' : '';
-                        selectHtml += `<option value="${op}" ${selecionado}>${op}</option>`;
-                    });
-                    // Se o valor gravado for personalizado e não estiver na lista padrão, adiciona-o temporariamente
-                    if (!opcoesTurnosEscala.some(op => op.replace(/\s+/g, '') === valAtual.replace(/\s+/g, '')) && valAtual !== '') {
-                        selectHtml += `<option value="${valAtual}" selected>${valAtual}</option>`;
+                    if (turnoTexto === 'OFF' || turnoTexto === 'X') {
+                        valIn = turnoTexto;
+                        valFim = '---';
+                    } else if (turnoTexto.includes('-')) {
+                        let partes = turnoTexto.split('-').map(s => s.trim());
+                        valIn = partes[0];
+                        valFim = partes[1];
                     }
-                    selectHtml += `</select>`;
 
-                    html += `<td>${selectHtml}</td>`;
+                    // Select de Início
+                    let selectInHtml = `<select class="sel-in" data-nome="${nome}" data-data="${d.dataIso}" onchange="tratarMudancaInicio(this)">`;
+                    opcoesInicio.forEach(op => {
+                        let sel = (valIn.replace(/\s+/g, '') === op.replace(/\s+/g, '')) ? 'selected' : '';
+                        selectInHtml += `<option value="${op}" ${sel}>${op}</option>`;
+                    });
+                    if (!opcoesInicio.includes(valIn) && valIn !== '') {
+                        selectInHtml += `<option value="${valIn}" selected>${valIn}</option>`;
+                    }
+                    selectInHtml += `</select>`;
+
+                    // Select de Fim
+                    let isDisabled = (valIn === 'OFF' || valIn === 'X') ? 'disabled style="opacity:0.5;"' : '';
+                    let selectFimHtml = `<select class="sel-fim" data-nome="${nome}" data-data="${d.dataIso}" ${isDisabled}>`;
+                    opcoesFim.forEach(op => {
+                        let sel = (valFim.replace(/\s+/g, '') === op.replace(/\s+/g, '')) ? 'selected' : '';
+                        selectFimHtml += `<option value="${op}" ${sel}>${op}</option>`;
+                    });
+                    if (!opcoesFim.includes(valFim) && valFim !== '') {
+                        selectFimHtml += `<option value="${valFim}" selected>${valFim}</option>`;
+                    }
+                    selectFimHtml += `</select>`;
+
+                    html += `<td>${selectInHtml}<br>${selectFimHtml}</td>`;
                 });
                 html += `</tr>`;
             });
@@ -757,34 +808,64 @@
                         return e.nome === nome && eData === diaOrig.dataIso;
                     });
 
-                    let textoTurno = escOrig ? escOrig.turno_texto.trim() : 'OFF';
+                    let turnoTexto = escOrig ? escOrig.turno_texto.trim() : 'OFF';
+                    let valIn = 'OFF';
+                    let valFim = '---';
 
-                    const selectDest = document.querySelector(`#tabela-escala-grid select[data-nome="${nome}"][data-data="${diaDest.dataIso}"]`);
-                    if (selectDest) {
-                        selectDest.value = textoTurno;
+                    if (turnoTexto === 'OFF' || turnoTexto === 'X') {
+                        valIn = turnoTexto;
+                        valFim = '---';
+                    } else if (turnoTexto.includes('-')) {
+                        let partes = turnoTexto.split('-').map(s => s.trim());
+                        valIn = partes[0];
+                        valFim = partes[1];
+                    }
+
+                    const selectInDest = document.querySelector(`.sel-in[data-nome="${nome}"][data-data="${diaDest.dataIso}"]`);
+                    const selectFimDest = document.querySelector(`.sel-fim[data-nome="${nome}"][data-data="${diaDest.dataIso}"]`);
+                    
+                    if (selectInDest) {
+                        selectInDest.value = valIn;
+                        tratarMudancaInicio(selectInDest);
+                    }
+                    if (selectFimDest && !selectFimDest.disabled) {
+                        selectFimDest.value = valFim;
                     }
                 });
             });
 
-            alert(`Escala copiada com sucesso! Revise os valores na tabela e clique em "Salvar Escala" para gravar.`);
+            alert(`Escala copiada com sucesso! Revise os valores e clique em "Salvar Escala".`);
         }
 
         async function salvarTabelaEscala() {
-            const selects = document.querySelectorAll('#tabela-escala-grid select');
+            const linhas = document.querySelectorAll('#tabela-escala-grid tbody tr');
             let promessas = [];
 
-            selects.forEach(select => {
-                const nome = select.getAttribute('data-nome');
-                const data_turno = select.getAttribute('data-data');
-                const turno_texto = select.value.trim();
+            linhas.forEach(tr => {
+                const selectsIn = tr.querySelectorAll('.sel-in');
+                selectsIn.forEach(selIn => {
+                    const nome = selIn.getAttribute('data-nome');
+                    const data_turno = selIn.getAttribute('data-data');
+                    const selFim = tr.querySelector(`.sel-fim[data-nome="${nome}"][data-data="${data_turno}"]`);
+                    
+                    let valIn = selIn.value;
+                    let valFim = selFim ? selFim.value : '---';
+                    
+                    let turno_texto = '';
+                    if (valIn === 'OFF' || valIn === 'X') {
+                        turno_texto = valIn;
+                    } else {
+                        turno_texto = `${valIn} - ${valFim}`;
+                    }
 
-                promessas.push(
-                    fetch('/api/escala', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ nome, data_turno, turno_texto })
-                    })
-                );
+                    promessas.push(
+                        fetch('/api/escala', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ nome, data_turno, turno_texto })
+                        })
+                    );
+                });
             });
 
             try {
@@ -802,11 +883,13 @@
             let partes = turnoTexto.split('-').map(p => p.trim());
             if (partes.length !== 2) return 0;
 
-            let hIn = parseInt(partes[0]);
+            let hInStr = partes[0];
+            let hOutStr = partes[1].toUpperCase();
+
+            let hIn = parseInt(hInStr.split(':')[0]);
             let hOut;
 
-            let parteOutStr = partes[1].toUpperCase();
-            if (parteOutStr.includes('C')) {
+            if (hOutStr.includes('C')) {
                 let fechamentoStr = fechamentosConfig[nomeDiaSemana] || '23:00';
                 if (fechamentoStr.includes('ND')) {
                     let horaNum = parseInt(fechamentoStr.split(':')[0]);
@@ -814,11 +897,11 @@
                 } else {
                     hOut = parseInt(fechamentoStr.split(':')[0]);
                 }
-            } else if (parteOutStr.includes('ND')) {
-                let horaNum = parseInt(parteOutStr.split(':')[0] || parteOutStr);
+            } else if (hOutStr.includes('ND')) {
+                let horaNum = parseInt(hOutStr.split(':')[0]);
                 hOut = 24 + horaNum;
             } else {
-                hOut = parseInt(parteOutStr);
+                hOut = parseInt(hOutStr.split(':')[0]);
                 if (hOut < hIn) hOut += 24; 
             }
             return Math.max(0, hOut - hIn);
@@ -1035,6 +1118,8 @@
                     const escFunc = escalas.filter(e => e.nome === nome);
                     escFunc.forEach(esc => {
                         let chaveDia = normalizarData(esc.data_turno);
+                        // Ignora se for OFF ou X na atribuição para não poluir o calendário
+                        if (!esc.turno_texto || esc.turno_texto === 'OFF' || esc.turno_texto === 'X') return;
 
                         if (!mapaGeral[chaveDia]) mapaGeral[chaveDia] = {};
                         if (!mapaGeral[chaveDia][nome]) mapaGeral[chaveDia][nome] = { trabalhados: [], atribuidos: [] };
@@ -1191,7 +1276,7 @@
                 const infoTurno = turnosDoDia[func];
                 const semanaTotais = calcularTotaisSemana(dataIso, func);
 
-                let atribTexto = infoTurno.atribuidos && infoTurno.atribuidos.length > 0 ? infoTurno.atribuidos.join(', ') : 'Nenhuma escala atribuída';
+                let atribTexto = infoTurno.atribuidos && infoTurno.atribuidos.length > 0 ? infoTurno.atribuidos.join(', ') : 'OFF';
 
                 conteudo.innerHTML += `
                     <div style="background:white; padding:12px; margin-bottom:10px; border-radius:4px; border-left: 5px solid ${corFunc}">
@@ -1355,7 +1440,7 @@
                     await dispararRequisicaoAPI(nome, 'Clock In', dt1.toISOString(), dt1.toLocaleTimeString('pt-BR'), '(Manual)');
                     await dispararRequisicaoAPI(nome, 'Clock Out', dt2.toISOString(), dt2.toLocaleTimeString('pt-BR'), `(Manual: ${horas}h ${minutos}m)`);
                 } else if (tipo === 'in') {
-                    await dispararRequisiqueAPI(nome, 'Clock In', dt1.toISOString(), dt1.toLocaleTimeString('pt-BR'), '(Ajuste Manual)');
+                    await dispararRequisicaoAPI(nome, 'Clock In', dt1.toISOString(), dt1.toLocaleTimeString('pt-BR'), '(Ajuste Manual)');
                 } else if (tipo === 'out') {
                     await dispararRequisicaoAPI(nome, 'Clock Out', dt1.toISOString(), dt1.toLocaleTimeString('pt-BR'), '(Ajuste Manual)');
                 }
