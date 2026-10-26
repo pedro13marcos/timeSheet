@@ -61,6 +61,9 @@
         .tabela-escala th { background: #2c3e50; color: white; }
         .tabela-escala select { width: 100%; text-align: center; padding: 4px; font-size: 12px; border: 1px solid #ccc; border-radius: 3px; background: white; margin-bottom: 2px; }
 
+        /* Debug Box */
+        #debug-escala-box { background: #263238; color: #80cbc4; padding: 12px; border-radius: 5px; font-family: monospace; font-size: 12px; max-height: 150px; overflow-y: auto; margin-top: 15px; }
+
         /* Filtros de Calendário */
         .filtros-calendario { display: flex; gap: 20px; margin-bottom: 15px; background: #eee; padding: 10px; border-radius: 4px; font-size: 14px; font-weight: bold; align-items: center; }
 
@@ -132,7 +135,7 @@
                 <div id="painel-relatorio"></div>
             </div>
 
-            <!-- ABA 2: Criar Escala (Dois Dropdowns: Início e Fim) -->
+            <!-- ABA 2: Criar Escala com Painel de Diagnóstico -->
             <div id="aba-escala" class="aba">
                 <h1>Montar Escala de Turnos</h1>
                 <p>Selecione qualquer dia da semana (o sistema ajustará para a Segunda-feira) e defina individualmente a entrada e a saída.</p>
@@ -156,6 +159,13 @@
                     <table class="tabela-escala" id="tabela-escala-grid">
                         <!-- Gerado via JS com duplos selects -->
                     </table>
+                </div>
+
+                <!-- Painel de Diagnóstico do Banco (Debug) -->
+                <div style="margin-top: 25px;">
+                    <h3>🔍 Diagnóstico do Banco de Dados (Escalas Salvas)</h3>
+                    <p style="font-size: 13px; color: #666;">Aqui você pode ver o JSON exato retornado pelo servidor (`/api/escala`) para verificar se os dados estão salvos:</p>
+                    <div id="debug-escala-box">A carregar dados do banco...</div>
                 </div>
             </div>
 
@@ -270,9 +280,9 @@
 
         </div>
 
-        <!-- Rodapé com informações e contato -->
+        <!-- Rodapé com Deploy do GitHub e Informações Pessoais -->
         <footer>
-            Site desenvolvido por <strong>Pedro Marcos</strong> — Contato: <a href="mailto:pedromarcos212@gmail.com">pedromarcos212@gmail.com</a>
+            Deploy: <strong>v1.2 (Produção GitHub / Vercel)</strong> — Site desenvolvido por <strong>Pedro Marcos</strong> — Contato: <a href="mailto:pedromarcos212@gmail.com">pedromarcos212@gmail.com</a>
         </footer>
     </div>
 
@@ -294,14 +304,12 @@
             "00:00 ND", "00:30 ND", "01:00 ND", "01:30 ND", "02:00 ND", "02:30 ND", "03:00 ND", "03:30 ND", "03:59 ND"
         ];
 
-        // Opções para o Horário de Início (a cada 1 hora + OFF / X)
         const opcoesInicio = [
             "OFF", "X", "00:00", "01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00", 
             "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", 
             "17:00", "18:00", "19:00", "20:00", "21:00", "22:00", "23:00"
         ];
 
-        // Opções para o Horário de Fim (inclui Closing 'C' e horários ND até 03:59)
         const opcoesFim = [
             "---", "C", "00:00", "01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00", 
             "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", 
@@ -451,8 +459,19 @@
 
             try {
                 const resEscala = await fetch('/api/escala');
-                if (resEscala.ok) escalas = await resEscala.json();
-            } catch (e) { console.error(e); escalas = []; }
+                if (resEscala.ok) {
+                    escalas = await resEscala.json();
+                }
+            } catch (e) { 
+                console.error(e); 
+                escalas = []; 
+            }
+
+            // Atualiza o painel de debug visual na aba de escala
+            const debugBox = document.getElementById('debug-escala-box');
+            if (debugBox) {
+                debugBox.innerText = JSON.stringify(escalas, null, 2);
+            }
 
             recalcularEstadosDoBanco();
             renderizarTela();
@@ -638,7 +657,7 @@
             }
         }
 
-        // --- LÓGICA DA TABELA DE ESCALA (COM DUPLOS DROPDOWNS) ---
+        // --- LÓGICA DA TABELA DE ESCALA ---
         function formatarDataLocal(data) {
             const y = data.getFullYear();
             const m = String(data.getMonth() + 1).padStart(2, '0');
@@ -695,7 +714,7 @@
             if (dataVal instanceof Date) {
                 return formatarDataLocal(dataVal);
             }
-            return formatarDataLocal(new Date(dataVal));
+            return String(dataVal).slice(0, 10);
         }
 
         function tratarMudancaInicio(selectIn) {
@@ -877,7 +896,6 @@
             }
         }
 
-        // --- CÁLCULO DE HORAS DE ESCALA COM SUPORTE A ND (NEXT DAY) ---
         function parseTurnoTexto(turnoTexto, nomeDiaSemana) {
             if (!turnoTexto || turnoTexto === 'OFF' || turnoTexto === 'X') return 0;
             let partes = turnoTexto.split('-').map(p => p.trim());
@@ -907,7 +925,6 @@
             return Math.max(0, hOut - hIn);
         }
 
-        // --- CONFIGURAÇÕES DE UTILIZADORES ---
         function renderizarConfigUsuarios() {
             const container = document.getElementById('lista-config-usuarios');
             if(!container) return;
@@ -994,7 +1011,6 @@
             }
         }
 
-        // --- RELATÓRIO CUSTOMIZADO ---
         function gerarRelatorioCustomizado() {
             const strInicio = document.getElementById('rel-custom-inicio').value;
             const strFim = document.getElementById('rel-custom-fim').value;
@@ -1068,7 +1084,6 @@
             painel.innerHTML = htmlResultado;
         }
 
-        // --- CALENDÁRIO COM FILTROS E COMPARAÇÃO SEMANAL (SEG-DOM) ---
         function mudarMes(direcao) {
             dataAtualCal.setMonth(dataAtualCal.getMonth() + direcao);
             montarCalendario();
@@ -1118,7 +1133,6 @@
                     const escFunc = escalas.filter(e => e.nome === nome);
                     escFunc.forEach(esc => {
                         let chaveDia = normalizarData(esc.data_turno);
-                        // Ignora se for OFF ou X na atribuição para não poluir o calendário
                         if (!esc.turno_texto || esc.turno_texto === 'OFF' || esc.turno_texto === 'X') return;
 
                         if (!mapaGeral[chaveDia]) mapaGeral[chaveDia] = {};
@@ -1401,7 +1415,7 @@
 
             if (tipo === 'shift') {
                 grupoData2.style.display = 'block';
-                lblData1.innerText = 'Data e Hora de Entrada:';
+                lblData1.innerText = 'Data e Hora de Entrada:`;
             } else {
                 grupoData2.style.display = 'none';
                 lblData1.innerText = tipo === 'in' ? 'Data e Hora do Clock In:' : 'Data e Hora do Clock Out:';
