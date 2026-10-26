@@ -992,10 +992,14 @@
         atualizarRelogio();
         carregarRegistros();
         
-        // Atualização automática (polling) a cada 5 segundos para sincronizar dispositivos/terminais em tempo real
+        // 1. Relógio e contador rodam fluidamente a cada 1 segundo
         setInterval(() => {
             atualizarRelogio();
             atualizarContador();
+        }, 1000);
+
+        // 2. Sincronização com a base de dados (polling) roda a cada 5 segundos em segundo plano
+        setInterval(() => {
             carregarRegistros();
         }, 5000);
 
