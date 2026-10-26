@@ -66,7 +66,7 @@
         
         .usuario-card { background: white; padding: 12px; margin-bottom: 8px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; border-left: 6px solid #ccc; }
 
-        /* Tabela de Escala com Largura Mínima para Garantir Legibilidade e Scroll Horizontal Suave */
+        /* Tabela de Escala com Largura Mínima */
         .tabela-escala-container { width: 100%; overflow-x: auto; margin-top: 15px; border: 1px solid #ddd; border-radius: 4px; background: white; }
         .tabela-escala { width: 100%; min-width: 680px; border-collapse: collapse; text-align: center; }
         .tabela-escala th, .tabela-escala td { border: 1px solid #ccc; padding: 8px 6px; font-size: 13px; vertical-align: middle; transition: background-color 0.3s; }
@@ -81,14 +81,18 @@
 
         .filtros-calendario { display: flex; gap: 20px; margin-bottom: 15px; background: #eee; padding: 10px; border-radius: 4px; font-size: 14px; font-weight: bold; align-items: center; flex-wrap: wrap; }
         .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
-        .cal-day-name { font-weight: bold; background: #e0e0e0; padding: 10px; border-radius: 4px; }
-        .cal-day { background: #f1f1f1; min-height: 85px; padding: 5px; border-radius: 4px; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+        
+        /* Calendário com Largura Mínima e Scroll Horizontal Suave */
+        .cal-container { width: 100%; overflow-x: auto; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 4px; background: #fff; padding: 5px; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; min-width: 700px; }
+        
+        .cal-day-name { font-weight: bold; background: #e0e0e0; padding: 10px; border-radius: 4px; font-size: 13px; }
+        .cal-day { background: #f1f1f1; min-height: 95px; padding: 6px; border-radius: 4px; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
         .cal-day:hover { filter: brightness(0.95); }
         .cal-day.outro-mes { opacity: 0.3; }
-        .cal-day-num { font-weight: bold; font-size: 14px; z-index: 2; }
-        .cal-badges-container { display: flex; flex-direction: column; gap: 2px; z-index: 2; }
-        .cal-badge { font-size: 10px; padding: 2px 4px; border-radius: 3px; font-weight: bold; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cal-day-num { font-weight: bold; font-size: 13px; z-index: 2; }
+        .cal-badges-container { display: flex; flex-direction: column; gap: 2px; z-index: 2; margin-top: 4px; }
+        .cal-badge { font-size: 11px; padding: 3px 5px; border-radius: 3px; font-weight: bold; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         
         .legenda-cores { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; font-size: 14px; align-items: center; }
         .legenda-item { display: flex; align-items: center; gap: 5px; }
@@ -192,7 +196,9 @@
                     <h2 id="cal-mes-ano">Month Year</h2>
                     <button onclick="mudarMes(1)">Next Month ▶</button>
                 </div>
-                <div class="cal-grid" id="calendario-grid"></div>
+                <div class="cal-container">
+                    <div class="cal-grid" id="calendario-grid"></div>
+                </div>
                 <div id="modal-dia">
                     <h3 id="modal-titulo">Day Details</h3>
                     <div id="modal-conteudo"></div>
@@ -265,7 +271,7 @@
 
         </div>
         <footer>
-            Deploy: <strong>v1.7 (GitHub / Vercel Production)</strong> — Website developed by <strong>Pedro Marcos</strong> using <strong>vibe coding</strong> — Contact: <a href="mailto:pedromarcos212@gmail.com">pedromarcos212@gmail.com</a>
+            Deploy: <strong>v1.8 (GitHub / Vercel Production)</strong> — Website developed by <strong>Pedro Marcos</strong> using <strong>vibe coding</strong> — Contact: <a href="mailto:pedromarcos212@gmail.com">pedromarcos212@gmail.com</a>
         </footer>
     </div>
 
