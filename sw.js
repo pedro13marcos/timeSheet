@@ -1,4 +1,27 @@
 const CACHE_NAME = 'timeweb-cache-v2'; // Mudamos para v2 para forçar a atualização
+
+self.addEventListener('push', function(event) {
+  const data = event.data ? event.data.json() : { title: 'Time Web', body: 'Nova atualização na escala!' };
+  
+  const options = {
+    body: data.body,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png'
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  event.waitUntil(
+    clients.openWindow('/')
+  );
+});
+
+
 const urlsToCache = [
   '/',
   '/index.html',
