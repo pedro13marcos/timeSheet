@@ -71,7 +71,7 @@
         .tabela-escala { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; text-align: center; }
         .tabela-escala th, .tabela-escala td { border: 1px solid #ccc; padding: 6px; font-size: 13px; vertical-align: middle; transition: background-color 0.3s; }
         .tabela-escala th { background: #2c3e50; color: white; }
-        .tabela-escala th.th-uncovered { background: #d32f2f !important; color: #fff !important; }
+        .tabela-escala th.th-uncovered { background: #d32f2f !important; color: #ffffff !important; font-weight: bold; }
         .tabela-escala select { width: 100%; text-align: center; padding: 4px; font-size: 12px; border: 1px solid #ccc; border-radius: 3px; background: white; margin-bottom: 2px; }
         .td-total-horas { background-color: #eef2f7; font-weight: bold; color: #2c3e50; font-size: 14px; }
 
@@ -156,6 +156,9 @@
                 <h1>Build Shift Schedule</h1>
                 <p>Select any day of the week (the system will adjust to Monday) and individually define start and end times.</p>
                 
+                <!-- Banner de Alerta de Falta de Cobertura -->
+                <div id="banner-alerta-cobertura" style="display: none; background: #ffebee; border-left: 5px solid #d32f2f; color: #c62828; padding: 12px; margin-bottom: 15px; border-radius: 4px; font-size: 14px;"></div>
+
                 <div class="form-manual" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
                     <label style="margin:0; flex: 1; min-width: 200px;">Week (Starts on Monday):
                         <input type="date" id="escala-data-inicio" onchange="aoMudarDataEscala()" style="margin-top: 5px;">
@@ -793,14 +796,14 @@
             return Math.max(0, hOut - hIn);
         }
 
-        // Lógica para verificar a cobertura contínua de 12:00 até C em cada dia
-        function verificarCoberturaDia(dias, idx) {
+        // Mapeia e identifica lacunas de horários sem cobertura entre 12:00 e o Closing ('C')
+        function obterLacunasCoberturaDia(dias, idx) {
             const diaInfo = dias[idx];
             const nomeDia = diaInfo.nomeDia;
             const dataIso = diaInfo.dataIso;
 
             let hFechamento = obterHoraCalculada('C', nomeDia) || 23;
-            if (hFechamento <= 12) return true; // Caso especial se fechar antes do meio dia
+            if (hFechamento <= 12) return { lacunas: [], lacunasTexto: [] };
 
             let intervalos = [];
             const linhas = document.querySelectorAll('#tabela-escala-grid tbody tr');
@@ -826,15 +829,79 @@
                 }
             });
 
-            // Verifica cada bloco de 1 hora entre 12:00 e hFechamento
+            let horasSemCobertura = [];
             for (let h = 12; h < hFechamento; h++) {
                 let coberto = intervalos.some(inv => inv.start <= h && inv.end >= h + 1);
                 if (!coberto) {
-                    return false; // Existe período não coberto!
+                    horasSemCobertura.push(h);
                 }
             }
 
-            return true; // Cobertura completa de 12:00 até Closing
+            if (horasSemCobertura.length === 0) {
+                return { lacunas: [], lacunasTexto: [] };
+            }
+
+            // Agrupa horas consecutivas em blocos de texto
+            let lacunasTexto = [];
+            let inicioBloco = horasSemCobertura[0];
+            let fimBloco = horasSemCobertura[0] + 1;
+
+            for (let i = 1; i < horasSemCobertura.length; i++) {
+                if (horasSemCobertura[i] === fimBloco) {
+                    fimBloco = horasSemCobertura[i] + 1;
+                } else {
+                    lacunasTexto.push(formatarIntervaloHora(inicioBloco, fimBloco, hFechamento));
+                    inicioBloco = horasSemCobertura[i];
+                    fimBloco = horasSemCobertura[i] + 1;
+                }
+            }
+            lacunasTexto.push(formatarIntervaloHora(inicioBloco, fimBloco, hFechamento));
+
+            return { lacunas: horasSemCobertura, lacunasTexto };
+        }
+
+        function formatarIntervaloHora(inicio, fim, hFechamento) {
+            function fmt(h) {
+                if (h >= 24) return `${String(h - 24).padStart(2, '0')}:00 ND`;
+                return `${String(h).padStart(2, '0')}:00`;
+            }
+            let txtFim = (fim === hFechamento) ? `${fmt(fim)} (Closing)` : fmt(fim);
+            return `${fmt(inicio)} to ${txtFim}`;
+        }
+
+        function verificarEExibirAvisosCobertura(dias) {
+            let avisos = [];
+            
+            dias.forEach((d, idx) => {
+                let resultado = obterLacunasCoberturaDia(dias, idx);
+                let th = document.querySelector(`#tabela-escala-grid th[data-day-idx="${idx}"]`);
+                
+                if (resultado.lacunas.length > 0) {
+                    if (th) {
+                        th.classList.add('th-uncovered');
+                        th.innerHTML = `⚠️ ${d.nomeDia.slice(0,3)}<br>${d.dataFormatada}`;
+                        th.title = `Uncovered period: ${resultado.lacunasTexto.join(', ')}`;
+                    }
+                    avisos.push(`<strong>${d.nomeDia} (${d.dataFormatada}):</strong> Uncovered from ${resultado.lacunasTexto.join(', ')}`);
+                } else {
+                    if (th) {
+                        th.classList.remove('th-uncovered');
+                        th.innerHTML = `${d.nomeDia.slice(0,3)}<br>${d.dataFormatada}`;
+                        th.title = "";
+                    }
+                }
+            });
+
+            const elBanner = document.getElementById('banner-alerta-cobertura');
+            if (elBanner) {
+                if (avisos.length > 0) {
+                    elBanner.style.display = 'block';
+                    elBanner.innerHTML = `⚠️ <strong>Schedule Coverage Alert:</strong><br>` + avisos.map(a => `• ${a}`).join('<br>');
+                } else {
+                    elBanner.style.display = 'none';
+                    elBanner.innerHTML = '';
+                }
+            }
         }
 
         function atualizarTotaisTabelaEscala() {
@@ -867,20 +934,8 @@
                 }
             });
 
-            // 2. Destaca colunas com falta de cobertura entre 12:00 e Closing ('C')
-            dias.forEach((d, idx) => {
-                let coberto = verificarCoberturaDia(dias, idx);
-                let th = document.querySelector(`#tabela-escala-grid th[data-day-idx="${idx}"]`);
-                if (th) {
-                    if (!coberto) {
-                        th.classList.add('th-uncovered');
-                        th.title = "⚠️ Warning: There is an uncovered period between 12:00 PM and Closing ('C')!";
-                    } else {
-                        th.classList.remove('th-uncovered');
-                        th.title = "";
-                    }
-                }
-            });
+            // 2. Destaca colunas e exibe o banner com períodos descobertos
+            verificarEExibirAvisosCobertura(dias);
         }
 
         function carregarTabelaEscala() {
