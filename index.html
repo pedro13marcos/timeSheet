@@ -23,13 +23,10 @@
 <body>
 
     <h1>Controle de Ponto</h1>
-    
-    <!-- Relógio em tempo real -->
     <div id="relogio">00:00:00</div>
     
     <h3>Selecione o Funcionário:</h3>
     <div class="funcionarios" id="lista-funcionarios"></div>
-
     <div id="status-msg">Nenhum funcionário selecionado</div>
 
     <div class="botoes-ponto">
@@ -37,23 +34,20 @@
         <button class="btn-ponto" id="btn-out" onclick="registrarPonto('out')" disabled>Clock Out</button>
     </div>
 
-    <h2>Histórico de Registros</h2>
-    <div id="log-ponto"></div>
+    <h2>Histórico de Registros (Nuvevem)</h2>
+    <div id="log-ponto">Carregando dados...</div>
 
     <script>
         const nomes = ['Pedro', 'Max', 'Carlos', 'Sanny'];
         let usuarioSelecionado = null;
+        let registros = [];
         
-        let registros = JSON.parse(localStorage.getItem('registrosPonto')) || [];
+        // Mantém apenas o estado do turno atual no navegador
         let estadoUsuarios = JSON.parse(localStorage.getItem('estadoUsuarios')) || {};
-
         nomes.forEach(nome => {
-            if (!estadoUsuarios[nome]) {
-                estadoUsuarios[nome] = { trabalhando: false, horaEntrada: null };
-            }
+            if (!estadoUsuarios[nome]) estadoUsuarios[nome] = { trabalhando: false, horaEntrada: null };
         });
 
-        // Função para atualizar o relógio global da interface
         function atualizarRelogio() {
             const agora = new Date();
             document.getElementById('relogio').innerText = agora.toLocaleTimeString('pt-BR');
@@ -65,23 +59,29 @@
             atualizarContador();
         }
 
-        function registrarPonto(tipo) {
+        // Função para buscar os dados salvos no Vercel Postgres
+        async function carregarRegistros() {
+            try {
+                const resposta = await fetch('/api/ponto');
+                registros = await resposta.json();
+                renderizarTela();
+            } catch (erro) {
+                document.getElementById('log-ponto').innerText = "Erro ao carregar os registros.";
+            }
+        }
+
+        async function registrarPonto(tipo) {
             if (!usuarioSelecionado) return;
 
             const estado = estadoUsuarios[usuarioSelecionado];
             const agora = new Date();
+            let eventoTexto = '';
+            let resumoTexto = '';
 
             if (tipo === 'in') {
                 estado.trabalhando = true;
                 estado.horaEntrada = agora.toISOString();
-                
-                registros.push({
-                    nome: usuarioSelecionado,
-                    evento: 'Clock In',
-                    hora: agora.toLocaleTimeString('pt-BR'),
-                    dataCompleta: agora.toISOString(),
-                    resumo: ''
-                });
+                eventoTexto = 'Clock In';
             } else if (tipo === 'out') {
                 const entrada = new Date(estado.horaEntrada);
                 const minutosTotais = Math.floor((agora - entrada) / 60000);
@@ -90,20 +90,34 @@
 
                 estado.trabalhando = false;
                 estado.horaEntrada = null;
-
-                registros.push({
-                    nome: usuarioSelecionado,
-                    evento: 'Clock Out',
-                    hora: agora.toLocaleTimeString('pt-BR'),
-                    dataCompleta: agora.toISOString(),
-                    resumo: `(Duração: ${horas}h ${minutos}m)`
-                });
+                eventoTexto = 'Clock Out';
+                resumoTexto = `(Duração: ${horas}h ${minutos}m)`;
             }
 
             localStorage.setItem('estadoUsuarios', JSON.stringify(estadoUsuarios));
-            localStorage.setItem('registrosPonto', JSON.stringify(registros));
-            
             renderizarTela();
+
+            // Monta o pacote de dados para enviar ao banco
+            const dadosParaSalvar = {
+                nome: usuarioSelecionado,
+                evento: eventoTexto,
+                hora_local: agora.toLocaleTimeString('pt-BR'),
+                data_completa: agora.toISOString(),
+                resumo: resumoTexto
+            };
+
+            // Envia para a API via POST
+            try {
+                await fetch('/api/ponto', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dadosParaSalvar)
+                });
+                // Recarrega a lista para mostrar o novo clique confirmado pelo banco
+                await carregarRegistros();
+            } catch (erro) {
+                alert("Erro ao salvar no banco de dados.");
+            }
         }
 
         function renderizarTela() {
@@ -142,9 +156,10 @@
 
             const divLog = document.getElementById('log-ponto');
             divLog.innerHTML = '';
-            [...registros].reverse().forEach(reg => {
+            // A API já envia ordenado, não precisamos mais do .reverse()
+            registros.forEach(reg => {
                 divLog.innerHTML += `<div class="registro-item">
-                    <strong>${reg.nome}</strong> | ${reg.evento} às ${reg.hora} ${reg.resumo}
+                    <strong>${reg.nome}</strong> | ${reg.evento} às ${reg.hora_local} ${reg.resumo || ''}
                 </div>`;
             });
         }
@@ -158,17 +173,14 @@
                     const minutosTotais = Math.floor((agora - entrada) / 60000);
                     const horas = Math.floor(minutosTotais / 60);
                     const minutos = minutosTotais % 60;
-                    
                     document.getElementById('btn-out').innerText = `Clock Out (${horas}h ${minutos}m)`;
                 }
             }
         }
 
-        // Executa imediatamente para evitar um segundo em branco na tela
         atualizarRelogio();
-        renderizarTela();
+        carregarRegistros();
         
-        // Agrupa as duas atualizações temporais no mesmo intervalo de 1 segundo
         setInterval(() => {
             atualizarRelogio();
             atualizarContador();
