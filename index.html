@@ -55,12 +55,12 @@
         
         .usuario-card { background: white; padding: 12px; margin-bottom: 8px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; border-left: 6px solid #ccc; }
 
-        /* Schedule Table with Double Dropdowns */
+        /* Schedule Table */
         .tabela-escala { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; text-align: center; }
         .tabela-escala th, .tabela-escala td { border: 1px solid #ccc; padding: 6px; font-size: 13px; vertical-align: middle; }
         .tabela-escala th { background: #2c3e50; color: white; }
         .tabela-escala select { width: 100%; text-align: center; padding: 4px; font-size: 12px; border: 1px solid #ccc; border-radius: 3px; background: white; margin-bottom: 2px; }
-        .col-total-horas { font-weight: bold; background: #eef2f7; color: #2c3e50; font-size: 14px; }
+        .td-total-horas { background-color: #eef2f7; font-weight: bold; color: #2c3e50; font-size: 14px; }
 
         /* Calendar Filters */
         .filtros-calendario { display: flex; gap: 20px; margin-bottom: 15px; background: #eee; padding: 10px; border-radius: 4px; font-size: 14px; font-weight: bold; align-items: center; }
@@ -68,7 +68,7 @@
         /* Calendar Styles */
         .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
-        .cal-day-name { font-weight: bold; background: #2c3e50; color: white; padding: 10px; border-radius: 4px; }
+        .cal-day-name { font-weight: bold; background: #e0e0e0; padding: 10px; border-radius: 4px; }
         .cal-day { background: #f1f1f1; min-height: 85px; padding: 5px; border-radius: 4px; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
         .cal-day:hover { filter: brightness(0.95); }
         .cal-day.outro-mes { opacity: 0.3; }
@@ -84,6 +84,10 @@
         #modal-dia { display: none; background: #fff3e0; border: 1px solid #ffb74d; padding: 15px; border-radius: 5px; margin-top: 20px; }
         .btn-acao-mini { background: #d32f2f; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; }
         .btn-editar-mini { background: #1976d2; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; margin-right: 5px; }
+        
+        /* Deleted Items Styling in Reports */
+        .deleted-box { background: #ffebee; border-left: 5px solid #f44336; padding: 12px; margin-top: 15px; border-radius: 4px; }
+        .deleted-item { font-size: 12px; background: white; padding: 6px; margin-top: 4px; border-radius: 3px; border: 1px solid #ffcdd2; color: #c62828; }
     </style>
 </head>
 <body>
@@ -160,7 +164,7 @@
                 </div>
             </div>
 
-            <!-- TAB 3: Calendar (Starts on Monday) -->
+            <!-- TAB 3: Calendar -->
             <div id="aba-historico" class="aba">
                 <h1>Shift Calendar</h1>
                 
@@ -312,6 +316,7 @@
         let usuariosSelecionadosCal = [];
         let usuariosSelecionadosRel = [];
         let registros = [];
+        let registrosExcluidos = [];
         let escalas = [];
         
         let dataAtualCal = new Date();
@@ -329,9 +334,7 @@
             });
             localStorage.setItem('fechamentosConfig', JSON.stringify(fechamentosConfig));
             alert("Closing times saved successfully!");
-            if(document.getElementById('aba-escala').classList.contains('ativa')) {
-                atualizarTodosOsTotaisLinha();
-            }
+            atualizarTotaisTabelaEscala();
         }
 
         function renderizarInputsFechamento() {
@@ -421,12 +424,10 @@
             renderizarTela();
         }
 
-        // --- RELÓGIO PRINCIPAL (Atualizado cada 1 segundo sem interromper o DOM) ---
         function atualizarRelogio() {
             const agora = new Date();
             const relogioEl = document.getElementById('relogio');
             if(relogioEl) relogioEl.innerText = agora.toLocaleTimeString('en-US');
-            atualizarContador();
         }
 
         function selecionar(nome) {
@@ -455,10 +456,19 @@
             renderizarTela();
         }
 
-        async function carregarDadosGerais() {
+        async function carregarDadosGerais(reconstruirGradeEscala = true) {
             try {
                 const resPonto = await fetch('/api/ponto');
-                if (resPonto.ok) registros = await resPonto.json();
+                if (resPonto.ok) {
+                    const dataPonto = await resPonto.json();
+                    if (Array.isArray(dataPonto)) {
+                        registros = dataPonto;
+                        registrosExcluidos = [];
+                    } else {
+                        registros = dataPonto.ativos || [];
+                        registrosExcluidos = dataPonto.excluidos || [];
+                    }
+                }
             } catch (e) { console.error(e); }
 
             try {
@@ -472,7 +482,7 @@
             }
 
             recalcularEstadosDoBanco();
-            renderizarTela();
+            renderizarTela(reconstruirGradeEscala);
         }
 
         async function dispararRequisicaoAPI(nome, evento, dataIso, horaLocal, resumo) {
@@ -512,13 +522,13 @@
                     await dispararRequisicaoAPI(usuarioSelecionado, 'Clock Out', dataIso, horaLocal, `(Duration: ${horas}h ${minutos}m)`);
                 }
 
-                await carregarDadosGerais();
+                await carregarDadosGerais(true);
             } catch (erro) {
                 alert("Error saving to server.");
             }
         }
 
-        function renderizarTela() {
+        function renderizarTela(reconstruirGradeEscala = true) {
             const nomesAtuais = obterListaNomes();
 
             const divFunc = document.getElementById('lista-funcionarios');
@@ -653,9 +663,13 @@
             if(document.getElementById('aba-historico').classList.contains('ativa')) {
                 montarCalendario();
             }
+
+            if(reconstruirGradeEscala && document.getElementById('aba-escala').classList.contains('ativa')) {
+                carregarTabelaEscala();
+            }
         }
 
-        // --- CÁLCULO DE HORAS DE TURNO E TABELA DE ESCALA ---
+        // --- SCHEDULE TABLE LOGIC ---
         function formatarDataLocal(data) {
             const y = data.getFullYear();
             const m = String(data.getMonth() + 1).padStart(2, '0');
@@ -715,71 +729,6 @@
             return String(dataVal).slice(0, 10);
         }
 
-        // Calcula a duração em minutos de um único dia com base nos dropdowns e nas configurações de fechamento
-        function calcularMinutosTurno(valIn, valFim, nomeDiaSemana) {
-            if (!valIn || valIn === 'OFF' || valIn === 'X' || !valFim || valFim === '---') return 0;
-
-            let minIn = parseInt(valIn.split(':')[0]) * 60 + parseInt(valIn.split(':')[1] || 0);
-            let minFim = 0;
-
-            if (valFim === 'C') {
-                let fechamentoStr = fechamentosConfig[nomeDiaSemana] || '23:00';
-                let partes = fechamentoStr.split(' ');
-                let horaPartes = partes[0].split(':');
-                let hNum = parseInt(horaPartes[0]);
-                let mNum = parseInt(horaPartes[1] || 0);
-
-                if (fechamentoStr.includes('ND')) {
-                    minFim = (24 + hNum) * 60 + mNum;
-                } else {
-                    minFim = hNum * 60 + mNum;
-                }
-            } else if (valFim.includes('ND')) {
-                let partes = valFim.split(' ')[0].split(':');
-                let hNum = parseInt(partes[0]);
-                let mNum = parseInt(partes[1] || 0);
-                minFim = (24 + hNum) * 60 + mNum;
-            } else {
-                let partes = valFim.split(':');
-                let hNum = parseInt(partes[0]);
-                let mNum = parseInt(partes[1] || 0);
-                minFim = hNum * 60 + mNum;
-                if (minFim < minIn) minFim += 24 * 60;
-            }
-
-            return Math.max(0, minFim - minIn);
-        }
-
-        function atualizarTotalHorasLinha(nomeFunc) {
-            const tr = document.querySelector(`tr[data-linha-func="${nomeFunc}"]`);
-            if (!tr) return;
-
-            let minutosTotaisSemana = 0;
-            const selectsIn = tr.querySelectorAll('.sel-in');
-
-            selectsIn.forEach(selIn => {
-                const dataIso = selIn.getAttribute('data-data');
-                const diaSemanaNome = selIn.getAttribute('data-dia-nome');
-                const selFim = tr.querySelector(`.sel-fim[data-data="${dataIso}"]`);
-                
-                let valIn = selIn.value;
-                let valFim = selFim ? selFim.value : '---';
-
-                minutosTotaisSemana += calcularMinutosTurno(valIn, valFim, diaSemanaNome);
-            });
-
-            const horas = Math.floor(minutosTotaisSemana / 60);
-            const mins = minutosTotaisSemana % 60;
-            const cellTotal = document.getElementById(`total-horas-${nomeFunc}`);
-            if (cellTotal) {
-                cellTotal.innerText = mins > 0 ? `${horas}h ${mins}m` : `${horas}h`;
-            }
-        }
-
-        function atualizarTodosOsTotaisLinha() {
-            obterListaNomes().forEach(nome => atualizarTotalHorasLinha(nome));
-        }
-
         function tratarMudancaInicio(selectIn) {
             let val = selectIn.value;
             let nome = selectIn.getAttribute('data-nome');
@@ -798,7 +747,61 @@
                     }
                 }
             }
-            atualizarTotalHorasLinha(nome);
+            atualizarTotaisTabelaEscala();
+        }
+
+        function calcularHorasShift(valIn, valFim, nomeDia) {
+            if (!valIn || valIn === 'OFF' || valIn === 'X') return 0;
+            let hIn = parseInt(valIn.split(':')[0]);
+            let hOut;
+
+            let hOutStr = (valFim || '---').toUpperCase();
+            if (hOutStr === '---') return 0;
+
+            if (hOutStr.includes('C')) {
+                let fechamentoStr = fechamentosConfig[nomeDia] || '23:00';
+                if (fechamentoStr.includes('ND')) {
+                    hOut = 24 + parseInt(fechamentoStr.split(':')[0]);
+                } else {
+                    hOut = parseInt(fechamentoStr.split(':')[0]);
+                }
+            } else if (hOutStr.includes('ND')) {
+                hOut = 24 + parseInt(hOutStr.split(':')[0]);
+            } else {
+                hOut = parseInt(hOutStr.split(':')[0]);
+                if (hOut < hIn) hOut += 24;
+            }
+            return Math.max(0, hOut - hIn);
+        }
+
+        function atualizarTotaisTabelaEscala() {
+            const linhas = document.querySelectorAll('#tabela-escala-grid tbody tr');
+            const dataSegunda = document.getElementById('escala-data-inicio').value;
+            if (!dataSegunda) return;
+            const dias = obterDiasDaSemana(dataSegunda);
+
+            linhas.forEach(tr => {
+                let totalMinutos = 0;
+                const selectsIn = tr.querySelectorAll('.sel-in');
+                selectsIn.forEach((selIn, idx) => {
+                    const nomeDia = dias[idx].nomeDia;
+                    const data_turno = selIn.getAttribute('data-data');
+                    const nome = selIn.getAttribute('data-nome');
+                    const selFim = tr.querySelector(`.sel-fim[data-nome="${nome}"][data-data="${data_turno}"]`);
+                    
+                    let valIn = selIn.value;
+                    let valFim = selFim ? selFim.value : '---';
+
+                    totalMinutos += (calcularHorasShift(valIn, valFim, nomeDia) * 60);
+                });
+
+                const tdTotal = tr.querySelector('.td-total-horas');
+                if (tdTotal) {
+                    let h = Math.floor(totalMinutos / 60);
+                    let m = totalMinutos % 60;
+                    tdTotal.innerHTML = `${h}h${m > 0 ? ` ${m}m` : ''}`;
+                }
+            });
         }
 
         function carregarTabelaEscala() {
@@ -814,10 +817,10 @@
             dias.forEach(d => {
                 html += `<th>${d.nomeDia.slice(0,3)}<br>${d.dataFormatada}</th>`;
             });
-            html += `<th class="col-total-horas">Weekly Total</th></tr></thead><tbody>`;
+            html += `<th>Total Hours</th></tr></thead><tbody>`;
 
             nomesAtuais.forEach(nome => {
-                html += `<tr data-linha-func="${nome}"><td style="font-weight:bold; background:#f4f4f4;">${nome}</td>`;
+                html += `<tr><td style="font-weight:bold; background:#f4f4f4;">${nome}</td>`;
                 dias.forEach(d => {
                     let esc = escalas.find(e => {
                         let eData = normalizarData(e.data_turno);
@@ -837,7 +840,7 @@
                         valFim = partes[1];
                     }
 
-                    let selectInHtml = `<select class="sel-in" data-nome="${nome}" data-data="${d.dataIso}" data-dia-nome="${d.nomeDia}" onchange="tratarMudancaInicio(this)">`;
+                    let selectInHtml = `<select class="sel-in" data-nome="${nome}" data-data="${d.dataIso}" onchange="tratarMudancaInicio(this)">`;
                     opcoesInicio.forEach(op => {
                         let sel = (valIn.replace(/\s+/g, '') === op.replace(/\s+/g, '')) ? 'selected' : '';
                         selectInHtml += `<option value="${op}" ${sel}>${op}</option>`;
@@ -848,7 +851,7 @@
                     selectInHtml += `</select>`;
 
                     let isDisabled = (valIn === 'OFF' || valIn === 'X') ? 'disabled style="opacity:0.5;"' : '';
-                    let selectFimHtml = `<select class="sel-fim" data-nome="${nome}" data-data="${d.dataIso}" data-dia-nome="${d.nomeDia}" onchange="atualizarTotalHorasLinha('${nome}')" ${isDisabled}>`;
+                    let selectFimHtml = `<select class="sel-fim" data-nome="${nome}" data-data="${d.dataIso}" ${isDisabled} onchange="atualizarTotaisTabelaEscala()">`;
                     opcoesFim.forEach(op => {
                         let sel = (valFim.replace(/\s+/g, '') === op.replace(/\s+/g, '')) ? 'selected' : '';
                         selectFimHtml += `<option value="${op}" ${sel}>${op}</option>`;
@@ -860,15 +863,13 @@
 
                     html += `<td>${selectInHtml}<br>${selectFimHtml}</td>`;
                 });
-                
-                // Coluna do Total de Horas Semanais Atribuídas
-                html += `<td class="col-total-horas" id="total-horas-${nome}">0h</td></tr>`;
+
+                html += `<td class="td-total-horas">0h</td>`;
+                html += `</tr>`;
             });
             html += `</tbody>`;
             grid.innerHTML = html;
-
-            // Calcula o total inicial de horas para cada linha
-            atualizarTodosOsTotaisLinha();
+            atualizarTotaisTabelaEscala();
         }
 
         function copiarEscalaDeOutraSemana() {
@@ -920,7 +921,7 @@
                 });
             });
 
-            atualizarTodosOsTotaisLinha();
+            atualizarTotaisTabelaEscala();
             alert(`Schedule copied successfully! Review the values and click "Save Schedule".`);
         }
 
@@ -958,7 +959,7 @@
             try {
                 await Promise.all(promessas);
                 alert("Schedule saved successfully to the cloud!");
-                await carregarDadosGerais();
+                await carregarDadosGerais(false);
             } catch (erro) {
                 alert("Error saving schedule.");
             }
@@ -969,7 +970,28 @@
             let partes = turnoTexto.split('-').map(p => p.trim());
             if (partes.length !== 2) return 0;
 
-            return calcularMinutosTurno(partes[0], partes[1], nomeDiaSemana) / 60;
+            let hInStr = partes[0];
+            let hOutStr = partes[1].toUpperCase();
+
+            let hIn = parseInt(hInStr.split(':')[0]);
+            let hOut;
+
+            if (hOutStr.includes('C')) {
+                let fechamentoStr = fechamentosConfig[nomeDiaSemana] || '23:00';
+                if (fechamentoStr.includes('ND')) {
+                    let horaNum = parseInt(fechamentoStr.split(':')[0]);
+                    hOut = 24 + horaNum;
+                } else {
+                    hOut = parseInt(fechamentoStr.split(':')[0]);
+                }
+            } else if (hOutStr.includes('ND')) {
+                let horaNum = parseInt(hOutStr.split(':')[0]);
+                hOut = 24 + horaNum;
+            } else {
+                hOut = parseInt(hOutStr.split(':')[0]);
+                if (hOut < hIn) hOut += 24; 
+            }
+            return Math.max(0, hOut - hIn);
         }
 
         function renderizarConfigUsuarios() {
@@ -1027,7 +1049,7 @@
 
             salvarFuncionariosStorage();
             document.getElementById('config-nome').value = '';
-            carregarDadosGerais();
+            carregarDadosGerais(true);
             alert("Employee saved successfully!");
         }
 
@@ -1039,7 +1061,7 @@
             if(confirm(`Are you sure you want to remove ${funcionarios[index].nome}?`)) {
                 funcionarios.splice(index, 1);
                 salvarFuncionariosStorage();
-                carregarDadosGerais();
+                carregarDadosGerais(true);
             }
         }
 
@@ -1109,11 +1131,18 @@
                 const h = Math.floor(minutosTotais / 60);
                 const m = minutosTotais % 60;
 
+                // Registros excluídos do funcionário no período
+                const excluidosFunc = registrosExcluidos.filter(r => {
+                    if (r.nome !== nome) return false;
+                    let dtDel = new Date(r.deleted_at || r.data_completa);
+                    return dtDel >= dtInicio && dtDel <= dtFim;
+                });
+
                 htmlResultado += `
                     <div style="background:#e3f2fd; padding:15px; margin-top:10px; border-radius:5px; border-left: 5px solid ${obterCorFuncionario(nome)}">
                         <p><strong>Employee: ${nome}</strong></p>
                         <p>⏱️ Hours worked in period: <strong>${h}h ${m}m</strong></p>
-                        <p><strong>Records Found:</strong></p>
+                        <p><strong>Active Records Found:</strong></p>
                 `;
 
                 if (registrosNoPeriodo.length === 0) {
@@ -1125,6 +1154,25 @@
                         </div>`;
                     });
                 }
+
+                // Seção de Exclusões por Funcionário
+                if (excluidosFunc.length > 0) {
+                    htmlResultado += `
+                        <div class="deleted-box">
+                            <p style="margin:0 0 5px 0; font-weight:bold; color:#c62828;">🗑️ Deleted Records Log (${excluidosFunc.length} deleted item/s):</p>
+                    `;
+                    excluidosFunc.forEach(del => {
+                        let dataOrig = new Date(del.data_completa).toLocaleString('en-US');
+                        let dataDel = del.deleted_at ? new Date(del.deleted_at).toLocaleString('en-US') : 'Unknown';
+                        htmlResultado += `
+                            <div class="deleted-item">
+                                ❌ <strong>${del.evento}</strong> originally at ${dataOrig} ${del.resumo || ''} — <em>Deleted on: ${dataDel}</em>
+                            </div>
+                        `;
+                    });
+                    htmlResultado += `</div>`;
+                }
+
                 htmlResultado += `</div>`;
             });
 
@@ -1193,14 +1241,12 @@
             return mapaGeral;
         }
 
-        // --- MONTAGEM DO CALENDÁRIO COM SEGUNDA-FEIRA COMO PRIMEIRO DIA ---
         function montarCalendario() {
             const grid = document.getElementById('calendario-grid');
             const lblMesAno = document.getElementById('cal-mes-ano');
             if (!grid) return;
 
             grid.innerHTML = '';
-            // Ordem iniciando em Segunda-feira (Mon) até Domingo (Sun)
             const diasSemana = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
             diasSemana.forEach(d => {
                 grid.innerHTML += `<div class="cal-day-name">${d}</div>`;
@@ -1210,17 +1256,15 @@
             const mes = dataAtualCal.getMonth();
             if(lblMesAno) lblMesAno.innerText = `${dataAtualCal.toLocaleString('en-US', { month: 'long' })} ${ano}`;
 
-            // Ajuste do dia da semana para Segunda = 0, Terça = 1, ..., Domingo = 6
-            let primeiroDiaIndex = new Date(ano, mes, 1).getDay();
-            primeiroDiaIndex = (primeiroDiaIndex === 0) ? 6 : primeiroDiaIndex - 1;
+            let primeiroDiaSemana = new Date(ano, mes, 1).getDay(); 
+            let offsetSegunda = (primeiroDiaSemana === 0) ? 6 : primeiroDiaSemana - 1;
 
             const ultimoDiaMes = new Date(ano, mes + 1, 0).getDate();
             const ultimoDiaMesAnterior = new Date(ano, mes, 0).getDate();
 
             const mapaGeral = mapearTurnosMultiplos();
 
-            // Preenche os dias do mês anterior na grade
-            for (let i = primeiroDiaIndex - 1; i >= 0; i--) {
+            for (let i = offsetSegunda - 1; i >= 0; i--) {
                 let diaNum = ultimoDiaMesAnterior - i;
                 grid.innerHTML += `<div class="cal-day outro-mes"><span class="cal-day-num">${diaNum}</span></div>`;
             }
@@ -1393,7 +1437,7 @@
                 if(idIn && idIn !== 'undefined') await apagarRegistroAPI(idIn);
                 if(idOut && idOut !== 'undefined') await apagarRegistroAPI(idOut);
                 alert("Record deleted successfully!");
-                await carregarDadosGerais();
+                await carregarDadosGerais(true);
                 montarCalendario();
                 const modal = document.getElementById('modal-dia');
                 if(modal) modal.style.display = 'none';
@@ -1470,6 +1514,29 @@
                 const minutos = (totais[nome] || 0) % 60;
                 painel.innerHTML += `<p><strong>${nome}:</strong> ${horas}h ${minutos}m</p>`;
             });
+
+            // Seção de Exclusões Gerais no Período Rápido
+            const excluidosNoPeriodo = registrosExcluidos.filter(r => {
+                let dtDel = new Date(r.deleted_at || r.data_completa);
+                return dtDel >= dataLimite;
+            });
+
+            if (excluidosNoPeriodo.length > 0) {
+                painel.innerHTML += `
+                    <div class="deleted-box">
+                        <p style="margin:0 0 5px 0; font-weight:bold; color:#c62828;">🗑️ Deleted Records Summary (${excluidosNoPeriodo.length} deleted item/s):</p>
+                `;
+                excluidosNoPeriodo.forEach(del => {
+                    let dataOrig = new Date(del.data_completa).toLocaleString('en-US');
+                    let dataDel = del.deleted_at ? new Date(del.deleted_at).toLocaleString('en-US') : 'Unknown';
+                    painel.innerHTML += `
+                        <div class="deleted-item">
+                            ❌ <strong>${del.nome}</strong>: ${del.evento} originally at ${dataOrig} ${del.resumo || ''} — <em>Deleted on: ${dataDel}</em>
+                        </div>
+                    `;
+                });
+                painel.innerHTML += `</div>`;
+            }
         }
 
         function atualizarFormularioManual() {
@@ -1531,22 +1598,26 @@
                 document.getElementById('man-data1').value = '';
                 document.getElementById('man-data2').value = '';
                 
-                await carregarDadosGerais();
+                await carregarDadosGerais(true);
                 mudarAba('ponto');
             } catch (erro) {
                 alert("Error saving adjustments.");
             }
         }
 
-        // --- INICIALIZAÇÃO E INTERVALOS ---
-        carregarDadosGerais();
-        atualizarRelogio();
-        
-        // Atualiza o relógio na tela a cada 1 segundo (sem recarregar o DOM da página)
-        setInterval(atualizarRelogio, 1000);
+        // Atualização contínua do relógio a cada 1 segundo
+        setInterval(() => {
+            atualizarRelogio();
+            atualizarContador();
+        }, 1000);
 
-        // Atualiza silenciosamente os dados do servidor a cada 10 segundos
-        setInterval(carregarDadosGerais, 10000);
+        // Busca periódica de dados no servidor sem recriar a tabela de escala ativamente
+        setInterval(() => {
+            carregarDadosGerais(false);
+        }, 10000);
+
+        atualizarRelogio();
+        carregarDadosGerais(true);
 
     </script>
 </body>
