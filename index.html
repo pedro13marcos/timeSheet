@@ -34,16 +34,16 @@
         #btn-out { background-color: #f44336; }
         #btn-in:disabled, #btn-out:disabled { background-color: #ccc; cursor: not-allowed; }
         #status-msg { margin-bottom: 15px; font-weight: bold; color: #555; }
-        #log-ponto { background: #f4f4f4; padding: 15px; border-radius: 5px; min-height: 100px; max-height: 250px; overflow-y: auto; margin-bottom: 20px; }
+        #log-ponto { background: #f4f4f4; padding: 15px; border-radius: 5px; min-height: 80px; max-height: 200px; overflow-y: auto; margin-bottom: 20px; }
         .registro-item { border-bottom: 1px solid #ddd; padding: 8px 0; display: flex; justify-content: space-between; align-items: center; }
         
-        /* Relatórios */
+        /* Relatórios rápidos da home */
         .area-relatorio { display: flex; gap: 10px; margin-top: 10px; }
         .area-relatorio select { padding: 10px; font-size: 16px; border-radius: 4px; border: 1px solid #ccc; flex: 1; }
         .btn-relatorio { background-color: #673AB7; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         #painel-relatorio { background: #e3f2fd; padding: 15px; border-radius: 5px; margin-top: 15px; display: none; }
         
-        /* Formulários Manuais */
+        /* Formulários Manuais e Relatório Customizado */
         .form-manual { background: #f4f4f4; padding: 20px; border-radius: 5px; }
         .form-manual label { display: block; margin-top: 15px; font-weight: bold; color: #333; }
         .form-manual input, .form-manual select { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
@@ -73,7 +73,8 @@
         <button class="btn-toggle" onclick="alternarSidebar()">☰ <span>Recolher</span></button>
         <h2>Ponto Web</h2>
         <button onclick="mudarAba('ponto')">⏰ <span>Bater Ponto</span></button>
-        <button onclick="mudarAba('historico')">📅 <span>Histórico & Calendário</span></button>
+        <button onclick="mudarAba('historico')">📅 <span>Calendário</span></button>
+        <button onclick="mudarAba('relatorios')">📊 <span>Relatórios Customizados</span></button>
         <button onclick="mudarAba('edicao')">✏️ <span>Ajuste Manual</span></button>
     </div>
 
@@ -94,7 +95,7 @@
                 <button class="btn-ponto" id="btn-out" onclick="registrarPonto('out')" disabled>Clock Out</button>
             </div>
 
-            <h2>Histórico Recente</h2>
+            <h2>Últimos 6 Registros</h2>
             <div id="log-ponto">Carregando dados...</div>
 
             <div class="area-relatorio">
@@ -104,7 +105,7 @@
                     <option value="quinzenal">Últimos 14 dias</option>
                     <option value="semanal">Últimos 7 dias</option>
                 </select>
-                <button class="btn-relatorio" onclick="gerarRelatorio()">Calcular Relatório</button>
+                <button class="btn-relatorio" onclick="gerarRelatorio()">Resumo Rápido</button>
             </div>
             <div id="painel-relatorio"></div>
         </div>
@@ -130,7 +131,34 @@
             </div>
         </div>
 
-        <!-- ABA 3: Ajuste Manual / Edição -->
+        <!-- ABA 3: Relatórios Customizados por Data/Hora -->
+        <div id="aba-relatorios" class="aba">
+            <h1>Relatórios por Período Específico</h1>
+            <p>Selecione um funcionário (ou todos) e defina o intervalo exato de data e horário para auditar turnos e horas trabalhadas.</p>
+            
+            <div class="form-manual">
+                <label>Funcionário:</label>
+                <select id="rel-custom-nome">
+                    <option value="TODOS">Todos os Funcionários</option>
+                    <option value="Pedro">Pedro</option>
+                    <option value="Max">Max</option>
+                    <option value="Carlos">Carlos</option>
+                    <option value="Sanny">Sanny</option>
+                </select>
+
+                <label>Data e Hora de Início:</label>
+                <input type="datetime-local" id="rel-custom-inicio">
+
+                <label>Data e Hora de Fim:</label>
+                <input type="datetime-local" id="rel-custom-fim">
+
+                <button class="btn-salvar-manual" onclick="gerarRelatorioCustomizado()">Gerar Relatório Detalhado</button>
+            </div>
+
+            <div id="painel-relatorio-custom" style="margin-top: 20px; display: none;"></div>
+        </div>
+
+        <!-- ABA 4: Ajuste Manual / Edição -->
         <div id="aba-edicao" class="aba">
             <h1 id="titulo-modo-edicao">Ajuste Manual de Horas</h1>
             
@@ -215,7 +243,8 @@
                 registros = await resposta.json();
                 renderizarTela();
             } catch (erro) {
-                document.getElementById('log-ponto').innerText = "Erro ao carregar os registos.";
+                const divLog = document.getElementById('log-ponto');
+                if(divLog) divLog.innerText = "Erro ao carregar os registos.";
             }
         }
 
@@ -310,14 +339,20 @@
                 if(btnOut) btnOut.disabled = true;
             }
 
+            // Histórico recente limitado estritamente aos últimos 6 registros
             const divLog = document.getElementById('log-ponto');
             if (divLog) {
                 divLog.innerHTML = '';
-                registros.forEach(reg => {
-                    divLog.innerHTML += `<div class="registro-item">
-                        <span><strong>${reg.nome}</strong> | ${reg.evento} às ${reg.hora_local} (${new Date(reg.data_completa).toLocaleDateString()}) ${reg.resumo || ''}</span>
-                    </div>`;
-                });
+                const ultimosSeis = registros.slice(0, 6);
+                if(ultimosSeis.length === 0) {
+                    divLog.innerHTML = '<p style="color:#666; font-size:14px;">Nenhum registro encontrado.</p>';
+                } else {
+                    ultimosSeis.forEach(reg => {
+                        divLog.innerHTML += `<div class="registro-item">
+                            <span><strong>${reg.nome}</strong> | ${reg.evento} às ${reg.hora_local} (${new Date(reg.data_completa).toLocaleDateString()}) ${reg.resumo || ''}</span>
+                        </div>`;
+                    });
+                }
             }
 
             if(usuarioSelecionadoCal) {
@@ -340,7 +375,84 @@
             }
         }
 
-        // --- CORREÇÃO DO FUSO HORÁRIO NO CALENDÁRIO ---
+        // --- RELATÓRIO CUSTOMIZADO POR PERÍODO ESPECÍFICO ---
+        function gerarRelatorioCustomizado() {
+            const nomeEscolhido = document.getElementById('rel-custom-nome').value;
+            const strInicio = document.getElementById('rel-custom-inicio').value;
+            const strFim = document.getElementById('rel-custom-fim').value;
+            const painel = document.getElementById('painel-relatorio-custom');
+            painel.style.display = 'block';
+
+            if (!strInicio || !strFim) {
+                alert("Por favor, preencha a data e o horário de início e fim.");
+                return;
+            }
+
+            const dtInicio = new Date(strInicio);
+            const dtFim = new Date(strFim);
+
+            if (dtFim <= dtInicio) {
+                alert("A data/hora final deve ser posterior à data/hora inicial.");
+                return;
+            }
+
+            let nomesAlvo = nomeEscolhido === 'TODOS' ? nomes : [nomeEscolhido];
+            let htmlResultado = `<h3>Relatório de ${dtInicio.toLocaleString('pt-BR')} até ${dtFim.toLocaleString('pt-BR')}</h3>`;
+
+            nomesAlvo.forEach(nome => {
+                const regsFunc = registros.filter(r => r.nome === nome).sort((a,b) => new Date(a.data_completa) - new Date(b.data_completa));
+                
+                let minutosTotais = 0;
+                let registrosNoPeriodo = [];
+                let entradaPendente = null;
+
+                regsFunc.forEach(reg => {
+                    if (reg.evento === 'Clock In') {
+                        entradaPendente = reg;
+                    } else if (reg.evento === 'Clock Out' && entradaPendente) {
+                        let tIn = new Date(entradaPendente.data_completa);
+                        let tOut = new Date(reg.data_completa);
+
+                        // Se o turno intercepta o intervalo personalizado escolhido
+                        if (tIn <= dtFim && tOut >= dtInicio) {
+                            let duracaoMin = Math.floor((tOut - tIn) / 60000);
+                            minutosTotais += duracaoMin;
+
+                            registrosNoPeriodo.push(entradaPendente);
+                            registrosNoPeriodo.push(reg);
+                        }
+                        entradaPendente = null;
+                    }
+                });
+
+                registrosNoPeriodo = [...new Set(registrosNoPeriodo)].sort((a,b) => new Date(b.data_completa) - new Date(a.data_completa));
+
+                const h = Math.floor(minutosTotais / 60);
+                const m = minutosTotais % 60;
+
+                htmlResultado += `
+                    <div style="background:#e3f2fd; padding:15px; margin-top:10px; border-radius:5px;">
+                        <p><strong>Funcionário: ${nome}</strong></p>
+                        <p>⏱️ Horas trabalhadas no período: <strong>${h}h ${m}m</strong></p>
+                        <p><strong>Registros Encontrados:</strong></p>
+                `;
+
+                if (registrosNoPeriodo.length === 0) {
+                    htmlResultado += `<p style="font-size:14px; color:#666;">Nenhum registo de ponto neste intervalo.</p>`;
+                } else {
+                    registrosNoPeriodo.forEach(r => {
+                        htmlResultado += `<div style="font-size:13px; background:white; padding:6px; margin-top:4px; border-radius:3px;">
+                            📅 ${new Date(r.data_completa).toLocaleString('pt-BR')} - <strong>${r.evento}</strong> ${r.resumo || ''}
+                        </div>`;
+                    });
+                }
+                htmlResultado += `</div>`;
+            });
+
+            painel.innerHTML = htmlResultado;
+        }
+
+        // --- CALENDÁRIO ---
         function formatarDataLocal(data) {
             const y = data.getFullYear();
             const m = String(data.getMonth() + 1).padStart(2, '0');
