@@ -19,10 +19,15 @@
         .btn-toggle { background: #1a252f !important; text-align: center; justify-content: center !important; font-weight: bold; margin-bottom: 10px; }
 
         /* Área Central */
-        #conteudo-principal { flex: 1; padding: 30px; overflow-y: auto; background: #fff; }
-        .aba { display: none; max-width: 950px; margin: 0 auto; }
+        #conteudo-principal { flex: 1; padding: 30px; overflow-y: auto; background: #fff; display: flex; flex-direction: column; justify-content: space-between; }
+        .conteudo-interno { max-width: 950px; margin: 0 auto; width: 100%; }
+        .aba { display: none; }
         .aba.ativa { display: block; }
         
+        /* Rodapé */
+        footer { margin-top: 40px; text-align: center; font-size: 13px; color: #666; border-top: 1px solid #eee; padding-top: 15px; }
+        footer a { color: #2196F3; text-decoration: none; }
+
         /* Aba Ponto */
         #relogio { font-size: 2.5em; font-weight: bold; text-align: center; margin-bottom: 20px; color: #333; }
         .funcionarios { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -94,165 +99,172 @@
         <button onclick="mudarAba('edicao')">✏️ <span>Ajuste Manual</span></button>
     </div>
 
-    <!-- Conteúdo Principal -->
+    <!-- Área Central -->
     <div id="conteudo-principal">
-        
-        <!-- ABA 1: Bater Ponto -->
-        <div id="aba-ponto" class="aba ativa">
-            <h1>Controle de Ponto</h1>
-            <div id="relogio">00:00:00</div>
+        <div class="conteudo-interno">
             
-            <h3>Selecione o Funcionário:</h3>
-            <div class="funcionarios" id="lista-funcionarios"></div>
-            <div id="status-msg">Nenhum funcionário selecionado</div>
+            <!-- ABA 1: Bater Ponto -->
+            <div id="aba-ponto" class="aba ativa">
+                <h1>Controle de Ponto</h1>
+                <div id="relogio">00:00:00</div>
+                
+                <h3>Selecione o Funcionário:</h3>
+                <div class="funcionarios" id="lista-funcionarios"></div>
+                <div id="status-msg">Nenhum funcionário selecionado</div>
 
-            <div class="botoes-ponto">
-                <button class="btn-ponto" id="btn-in" onclick="registrarPonto('in')" disabled>Clock In</button>
-                <button class="btn-ponto" id="btn-out" onclick="registrarPonto('out')" disabled>Clock Out</button>
-            </div>
-
-            <h2>Últimos 6 Registros</h2>
-            <div id="log-ponto">Carregando dados...</div>
-
-            <div class="area-relatorio">
-                <select id="filtro-tempo">
-                    <option value="6_meses">Últimos 6 Meses</option>
-                    <option value="mensal">Mês Atual</option>
-                    <option value="quinzenal">Últimos 14 dias</option>
-                    <option value="semanal">Últimos 7 dias</option>
-                </select>
-                <button class="btn-relatorio" onclick="gerarRelatorio()">Resumo Rápido</button>
-            </div>
-            <div id="painel-relatorio"></div>
-        </div>
-
-        <!-- ABA 2: Criar Escala (Estilo Excel) -->
-        <div id="aba-escala" class="aba">
-            <h1>Montar Escala de Turnos</h1>
-            <p>Selecione a semana (Segunda-feira) e preencha os turnos (Ex: <em>12-C</em>, <em>6-C</em>, <em>12-5</em>, <em>OFF</em> ou <em>X</em>).</p>
-            
-            <div class="form-manual" style="display: flex; gap: 15px; align-items: center;">
-                <label style="margin:0;">Semana (Início a Segunda):</label>
-                <input type="date" id="escala-data-inicio" onchange="carregarTabelaEscala()" style="flex: 1; margin:0;">
-                <button class="btn-acao" onclick="salvarTabelaEscala()" style="margin:0; width: 200px;">💾 Salvar Escala</button>
-            </div>
-
-            <div style="overflow-x: auto;">
-                <table class="tabela-escala" id="tabela-escala-grid">
-                    <!-- Gerado via JS -->
-                </table>
-            </div>
-        </div>
-
-        <!-- ABA 3: Histórico e Calendário Multi-Usuário com Filtros -->
-        <div id="aba-historico" class="aba">
-            <h1>Calendário de Turnos</h1>
-            
-            <h3>Funcionários:</h3>
-            <div class="funcionarios" id="lista-funcionarios-cal"></div>
-
-            <div class="filtros-calendario">
-                <span>Visualizar:</span>
-                <label><input type="checkbox" id="filtro-trab" checked onchange="montarCalendario()"> Turnos Trabalhados (Realizados)</label>
-                <label><input type="checkbox" id="filtro-atrib" checked onchange="montarCalendario()"> Turnos Atribuídos (Escala)</label>
-            </div>
-
-            <div class="legenda-cores" id="legenda-calendario"></div>
-
-            <div class="cal-header">
-                <button onclick="mudarMes(-1)">◀ Mês Anterior</button>
-                <h2 id="cal-mes-ano">Mês Ano</h2>
-                <button onclick="mudarMes(1)">Próximo Mês ▶</button>
-            </div>
-
-            <div class="cal-grid" id="calendario-grid"></div>
-
-            <div id="modal-dia">
-                <h3 id="modal-titulo">Detalhes do Dia</h3>
-                <div id="modal-conteudo"></div>
-            </div>
-        </div>
-
-        <!-- ABA 4: Relatórios Customizados -->
-        <div id="aba-relatorios" class="aba">
-            <h1>Relatórios por Período Específico</h1>
-            <div class="form-manual">
-                <label>Funcionários:</label>
-                <div class="funcionarios" id="lista-funcionarios-rel" style="margin-top: 5px;"></div>
-
-                <label>Data e Hora de Início:</label>
-                <input type="datetime-local" id="rel-custom-inicio">
-
-                <label>Data e Hora de Fim:</label>
-                <input type="datetime-local" id="rel-custom-fim">
-
-                <button class="btn-acao" onclick="gerarRelatorioCustomizado()">Gerar Relatório Detalhado</button>
-            </div>
-
-            <div id="painel-relatorio-custom" style="margin-top: 20px; display: none;"></div>
-        </div>
-
-        <!-- ABA 5: Configurações de Usuários & Fechamentos -->
-        <div id="aba-config" class="aba">
-            <h1>Configurações do Sistema</h1>
-            
-            <div class="form-manual">
-                <h3>Horários de Fechamento (Closing 'C') por Dia da Semana</h3>
-                <p style="font-size: 13px; color: #666;">Defina a que horas corresponde a letra 'C' quando atribuída na escala.</p>
-                <div id="config-fechamentos-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 10px;">
-                    <!-- Gerado via JS -->
-                </div>
-                <button class="btn-acao" onclick="salvarFechamentosConfig()">Salvar Horários de Fechamento</button>
-            </div>
-
-            <hr style="margin: 30px 0; border: 0; border-top: 1px solid #ddd;">
-
-            <h2>Configuração de Funcionários</h2>
-            <div class="form-manual">
-                <input type="hidden" id="config-edit-index" value="-1">
-                <label>Nome do Funcionário:</label>
-                <input type="text" id="config-nome" placeholder="Ex: Ana">
-
-                <label>Cor Identificadora:</label>
-                <input type="color" id="config-cor" value="#3f51b5" style="height: 40px; padding: 2px;">
-
-                <button class="btn-acao" id="btn-salvar-usuario" onclick="salvarUsuarioConfig()">Adicionar Funcionário</button>
-            </div>
-
-            <h2>Lista de Funcionários Atuais</h2>
-            <div id="lista-config-usuarios"></div>
-        </div>
-
-        <!-- ABA 6: Ajuste Manual / Edição -->
-        <div id="aba-edicao" class="aba">
-            <h1 id="titulo-modo-edicao">Ajuste Manual de Horas</h1>
-            
-            <div class="form-manual">
-                <input type="hidden" id="edit-id-in" value="">
-                <input type="hidden" id="edit-id-out" value="">
-
-                <label>Funcionário:</label>
-                <select id="man-nome"></select>
-
-                <label>Tipo de Ajuste:</label>
-                <select id="man-tipo" onchange="atualizarFormularioManual()">
-                    <option value="shift">Turno Completo (In e Out)</option>
-                    <option value="in">Apenas Clock In</option>
-                    <option value="out">Apenas Clock Out</option>
-                </select>
-
-                <label id="lbl-data1">Data e Hora de Entrada:</label>
-                <input type="datetime-local" id="man-data1">
-
-                <div id="grupo-data2">
-                    <label>Data e Hora de Saída:</label>
-                    <input type="datetime-local" id="man-data2">
+                <div class="botoes-ponto">
+                    <button class="btn-ponto" id="btn-in" onclick="registrarPonto('in')" disabled>Clock In</button>
+                    <button class="btn-ponto" id="btn-out" onclick="registrarPonto('out')" disabled>Clock Out</button>
                 </div>
 
-                <button class="btn-acao" id="btn-salvar-texto" onclick="salvarRegistroManual()">Salvar na Base de Dados</button>
+                <h2>Últimos 6 Registros</h2>
+                <div id="log-ponto">Carregando dados...</div>
+
+                <div class="area-relatorio">
+                    <select id="filtro-tempo">
+                        <option value="6_meses">Últimos 6 Meses</option>
+                        <option value="mensal">Mês Atual</option>
+                        <option value="quinzenal">Últimos 14 dias</option>
+                        <option value="semanal">Últimos 7 dias</option>
+                    </select>
+                    <button class="btn-relatorio" onclick="gerarRelatorio()">Resumo Rápido</button>
+                </div>
+                <div id="painel-relatorio"></div>
             </div>
+
+            <!-- ABA 2: Criar Escala (Estilo Excel) -->
+            <div id="aba-escala" class="aba">
+                <h1>Montar Escala de Turnos</h1>
+                <p>Selecione a semana (Segunda-feira) e preencha os turnos (Ex: <em>12-C</em>, <em>6-C</em>, <em>12-5</em>, <em>OFF</em> ou <em>X</em>).</p>
+                
+                <div class="form-manual" style="display: flex; gap: 15px; align-items: center;">
+                    <label style="margin:0;">Semana (Início a Segunda):</label>
+                    <input type="date" id="escala-data-inicio" onchange="carregarTabelaEscala()" style="flex: 1; margin:0;">
+                    <button class="btn-acao" onclick="salvarTabelaEscala()" style="margin:0; width: 200px;">💾 Salvar Escala</button>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table class="tabela-escala" id="tabela-escala-grid">
+                        <!-- Gerado via JS -->
+                    </table>
+                </div>
+            </div>
+
+            <!-- ABA 3: Histórico e Calendário Multi-Usuário com Filtros -->
+            <div id="aba-historico" class="aba">
+                <h1>Calendário de Turnos</h1>
+                
+                <h3>Funcionários:</h3>
+                <div class="funcionarios" id="lista-funcionarios-cal"></div>
+
+                <div class="filtros-calendario">
+                    <span>Visualizar:</span>
+                    <label><input type="checkbox" id="filtro-trab" checked onchange="montarCalendario()"> Turnos Trabalhados (Realizados)</label>
+                    <label><input type="checkbox" id="filtro-atrib" checked onchange="montarCalendario()"> Turnos Atribuídos (Escala)</label>
+                </div>
+
+                <div class="legenda-cores" id="legenda-calendario"></div>
+
+                <div class="cal-header">
+                    <button onclick="mudarMes(-1)">◀ Mês Anterior</button>
+                    <h2 id="cal-mes-ano">Mês Ano</h2>
+                    <button onclick="mudarMes(1)">Próximo Mês ▶</button>
+                </div>
+
+                <div class="cal-grid" id="calendario-grid"></div>
+
+                <div id="modal-dia">
+                    <h3 id="modal-titulo">Detalhes do Dia</h3>
+                    <div id="modal-conteudo"></div>
+                </div>
+            </div>
+
+            <!-- ABA 4: Relatórios Customizados -->
+            <div id="aba-relatorios" class="aba">
+                <h1>Relatórios por Período Específico</h1>
+                <div class="form-manual">
+                    <label>Funcionários:</label>
+                    <div class="funcionarios" id="lista-funcionarios-rel" style="margin-top: 5px;"></div>
+
+                    <label>Data e Hora de Início:</label>
+                    <input type="datetime-local" id="rel-custom-inicio">
+
+                    <label>Data e Hora de Fim:</label>
+                    <input type="datetime-local" id="rel-custom-fim">
+
+                    <button class="btn-acao" onclick="gerarRelatorioCustomizado()">Gerar Relatório Detalhado</button>
+                </div>
+
+                <div id="painel-relatorio-custom" style="margin-top: 20px; display: none;"></div>
+            </div>
+
+            <!-- ABA 5: Configurações de Usuários & Fechamentos -->
+            <div id="aba-config" class="aba">
+                <h1>Configurações do Sistema</h1>
+                
+                <div class="form-manual">
+                    <h3>Horários de Fechamento (Closing 'C') por Dia da Semana</h3>
+                    <p style="font-size: 13px; color: #666;">Defina o horário de fechamento até as 03:59 AM (com marcação ND para Next Day).</p>
+                    <div id="config-fechamentos-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 10px;">
+                        <!-- Gerado via JS -->
+                    </div>
+                    <button class="btn-acao" onclick="salvarFechamentosConfig()">Salvar Horários de Fechamento</button>
+                </div>
+
+                <hr style="margin: 30px 0; border: 0; border-top: 1px solid #ddd;">
+
+                <h2>Configuração de Funcionários</h2>
+                <div class="form-manual">
+                    <input type="hidden" id="config-edit-index" value="-1">
+                    <label>Nome do Funcionário:</label>
+                    <input type="text" id="config-nome" placeholder="Ex: Ana">
+
+                    <label>Cor Identificadora:</label>
+                    <input type="color" id="config-cor" value="#3f51b5" style="height: 40px; padding: 2px;">
+
+                    <button class="btn-acao" id="btn-salvar-usuario" onclick="salvarUsuarioConfig()">Adicionar Funcionário</button>
+                </div>
+
+                <h2>Lista de Funcionários Atuais</h2>
+                <div id="lista-config-usuarios"></div>
+            </div>
+
+            <!-- ABA 6: Ajuste Manual / Edição -->
+            <div id="aba-edicao" class="aba">
+                <h1 id="titulo-modo-edicao">Ajuste Manual de Horas</h1>
+                
+                <div class="form-manual">
+                    <input type="hidden" id="edit-id-in" value="">
+                    <input type="hidden" id="edit-id-out" value="">
+
+                    <label>Funcionário:</label>
+                    <select id="man-nome"></select>
+
+                    <label>Tipo de Ajuste:</label>
+                    <select id="man-tipo" onchange="atualizarFormularioManual()">
+                        <option value="shift">Turno Completo (In e Out)</option>
+                        <option value="in">Apenas Clock In</option>
+                        <option value="out">Apenas Clock Out</option>
+                    </select>
+
+                    <label id="lbl-data1">Data e Hora de Entrada:</label>
+                    <input type="datetime-local" id="man-data1">
+
+                    <div id="grupo-data2">
+                        <label>Data e Hora de Saída:</label>
+                        <input type="datetime-local" id="man-data2">
+                    </div>
+
+                    <button class="btn-acao" id="btn-salvar-texto" onclick="salvarRegistroManual()">Salvar na Base de Dados</button>
+                </div>
+            </div>
+
         </div>
 
+        <!-- Rodapé com informações e contato -->
+        <footer>
+            Site desenvolvido por <strong>Pedro Marcos</strong> — Contato: <a href="mailto:pedromarcos212@gmail.com">pedromarcos212@gmail.com</a>
+        </footer>
     </div>
 
     <script>
@@ -263,17 +275,22 @@
             { nome: 'Sanny', cor: '#009688' }
         ];
 
-        // Horários padrão de Closing (C) para cada dia da semana (0=Segunda, ..., 6=Domingo)
+        // Opções de fechamento incluindo horários ND (Next Day) até as 03:59
         let fechamentosConfig = JSON.parse(localStorage.getItem('fechamentosConfig')) || {
             'Segunda': '23:00', 'Terça': '23:00', 'Quarta': '23:00', 
-            'Quinta': '23:00', 'Sexta': '23:59', 'Sábado': '23:59', 'Domingo': '22:00'
+            'Quinta': '23:00', 'Sexta': '01:00 ND', 'Sábado': '01:00 ND', 'Domingo': '22:00'
         };
+
+        const opcoesHorariosFechamento = [
+            "21:00", "21:30", "22:00", "22:30", "23:00", "23:30", "23:59",
+            "00:00 ND", "00:30 ND", "01:00 ND", "01:30 ND", "02:00 ND", "02:30 ND", "03:00 ND", "03:30 ND", "03:59 ND"
+        ];
 
         let usuarioSelecionado = null;
         let usuariosSelecionadosCal = [];
         let usuariosSelecionadosRel = [];
         let registros = [];
-        let escalas = []; // Dados vindos de /api/escala
+        let escalas = [];
         
         let dataAtualCal = new Date();
         let estadoUsuarios = {};
@@ -285,8 +302,8 @@
         function salvarFechamentosConfig() {
             const dias = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
             dias.forEach(dia => {
-                const val = document.getElementById(`closing-${dia}`).value;
-                if(val) fechamentosConfig[dia] = val;
+                const sel = document.getElementById(`closing-${dia}`);
+                if(sel) fechamentosConfig[dia] = sel.value;
             });
             localStorage.setItem('fechamentosConfig', JSON.stringify(fechamentosConfig));
             alert("Horários de fechamento guardados com sucesso!");
@@ -298,10 +315,18 @@
             container.innerHTML = '';
             const dias = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
             dias.forEach(dia => {
+                let valorAtual = fechamentosConfig[dia] || '23:00';
+                let optionsHtml = '';
+                opcoesHorariosFechamento.forEach(op => {
+                    optionsHtml += `<option value="${op}" ${valorAtual === op ? 'selected' : ''}>${op}</option>`;
+                });
+
                 container.innerHTML += `
                     <div>
                         <label style="font-size:12px; margin-top:5px;">${dia}:</label>
-                        <input type="time" id="closing-${dia}" value="${fechamentosConfig[dia] || '23:00'}">
+                        <select id="closing-${dia}" style="padding:8px; font-size:14px; width:100%; border:1px solid #ccc; border-radius:4px;">
+                            ${optionsHtml}
+                        </select>
                     </div>
                 `;
             });
@@ -397,19 +422,19 @@
 
         async function carregarDadosGerais() {
             try {
-                const [resPonto, resEscala] = await Promise.all([
-                    fetch('/api/ponto'),
-                    fetch('/api/escala')
-                ]);
-                registros = await resPonto.json();
-                escalas = await resEscala.json();
-                recalcularEstadosDoBanco();
-                renderizarTela();
-                if(document.getElementById('aba-escala').classList.contains('ativa')) {
-                    carregarTabelaEscala();
-                }
-            } catch (erro) {
-                console.error("Erro ao carregar dados", erro);
+                const resPonto = await fetch('/api/ponto');
+                if (resPonto.ok) registros = await resPonto.json();
+            } catch (e) { console.error(e); }
+
+            try {
+                const resEscala = await fetch('/api/escala');
+                if (resEscala.ok) escalas = await resEscala.json();
+            } catch (e) { console.error(e); escalas = []; }
+
+            recalcularEstadosDoBanco();
+            renderizarTela();
+            if(document.getElementById('aba-escala').classList.contains('ativa')) {
+                carregarTabelaEscala();
             }
         }
 
@@ -597,7 +622,6 @@
         function inicializarSeletorEscala() {
             const inputData = document.getElementById('escala-data-inicio');
             if (!inputData.value) {
-                // Seleciona a segunda-feira da semana atual
                 let hoje = new Date();
                 let diaSemana = hoje.getDay();
                 let diff = hoje.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1);
@@ -629,6 +653,7 @@
             const dias = obterDiasDaSemana(dataSegunda);
             const nomesAtuais = obterListaNomes();
             const grid = document.getElementById('tabela-escala-grid');
+            if(!grid) return;
 
             let html = `<thead><tr><th>Funcionário</th>`;
             dias.forEach(d => {
@@ -639,7 +664,6 @@
             nomesAtuais.forEach(nome => {
                 html += `<tr><td style="font-weight:bold; background:#f4f4f4;">${nome}</td>`;
                 dias.forEach(d => {
-                    // Procura se já existe escala gravada
                     let esc = escalas.find(e => e.nome === nome && e.data_turno.slice(0,10) === d.dataIso);
                     let val = esc ? esc.turno_texto : 'OFF';
                     html += `<td><input type="text" data-nome="${nome}" data-data="${d.dataIso}" value="${val}"></td>`;
@@ -677,27 +701,35 @@
             }
         }
 
-        // --- CÁLCULO DE HORAS DE ESCALA ---
+        // --- CÁLCULO DE HORAS DE ESCALA COM SUPORTE A ND (NEXT DAY) ---
         function parseTurnoTexto(turnoTexto, nomeDiaSemana) {
             if (!turnoTexto || turnoTexto === 'OFF' || turnoTexto === 'X') return 0;
-            // Exemplo: "12 - C" ou "6 - C" ou "12 - 5"
             let partes = turnoTexto.split('-').map(p => p.trim());
             if (partes.length !== 2) return 0;
 
             let hIn = parseInt(partes[0]);
             let hOut;
 
-            if (partes[1].toUpperCase() === 'C') {
+            let parteOutStr = partes[1].toUpperCase();
+            if (parteOutStr.includes('C')) {
                 let fechamentoStr = fechamentosConfig[nomeDiaSemana] || '23:00';
-                hOut = parseInt(fechamentoStr.split(':')[0]);
+                if (fechamentoStr.includes('ND')) {
+                    let horaNum = parseInt(fechamentoStr.split(':')[0]);
+                    hOut = 24 + horaNum;
+                } else {
+                    hOut = parseInt(fechamentoStr.split(':')[0]);
+                }
+            } else if (parteOutStr.includes('ND')) {
+                let horaNum = parseInt(parteOutStr.split(':')[0] || parteOutStr);
+                hOut = 24 + horaNum;
             } else {
-                hOut = parseInt(partes[1]);
-                if (hOut < hIn) hOut += 24; // Turno que cruza meia-noite
+                hOut = parseInt(parteOutStr);
+                if (hOut < hIn) hOut += 24; 
             }
             return Math.max(0, hOut - hIn);
         }
 
-        // --- GESTÃO DE CONFIGURAÇÕES DE UTILIZADORES ---
+        // --- CONFIGURAÇÕES DE UTILIZADORES ---
         function renderizarConfigUsuarios() {
             const container = document.getElementById('lista-config-usuarios');
             if(!container) return;
@@ -873,11 +905,12 @@
 
         function mapearTurnosMultiplos() {
             let mapaGeral = {}; 
-            const mostrarTrab = document.getElementById('filtro-trab').checked;
-            const mostrarAtrib = document.getElementById('filtro-atrib').checked;
+            const filtroTrabEl = document.getElementById('filtro-trab');
+            const filtroAtribEl = document.getElementById('filtro-atrib');
+            const mostrarTrab = filtroTrabEl ? filtroTrabEl.checked : true;
+            const mostrarAtrib = filtroAtribEl ? filtroAtribEl.checked : true;
 
             usuariosSelecionadosCal.forEach(nome => {
-                // 1. Mapeia Trabalhados
                 if (mostrarTrab) {
                     const regsFunc = registros.filter(r => r.nome === nome).sort((a,b) => new Date(a.data_completa) - new Date(b.data_completa));
                     let entradaPendente = null;
@@ -910,7 +943,6 @@
                     });
                 }
 
-                // 2. Mapeia Atribuídos (Escala)
                 if (mostrarAtrib) {
                     const escFunc = escalas.filter(e => e.nome === nome);
                     escFunc.forEach(esc => {
@@ -939,7 +971,7 @@
 
             const ano = dataAtualCal.getFullYear();
             const mes = dataAtualCal.getMonth();
-            lblMesAno.innerText = `${dataAtualCal.toLocaleString('pt-BR', { month: 'long' })} de ${ano}`;
+            if(lblMesAno) lblMesAno.innerText = `${dataAtualCal.toLocaleString('pt-BR', { month: 'long' })} de ${ano}`;
 
             const primeiroDiaMes = new Date(ano, mes, 1).getDay();
             const ultimoDiaMes = new Date(ano, mes + 1, 0).getDate();
@@ -983,7 +1015,7 @@
                 let htmlBadges = '<div class="cal-badges-container">';
                 funcionariosNoDia.forEach(func => {
                     let badgeTxt = func;
-                    if(turnosDoDia[func].atribuidos.length > 0) {
+                    if(turnosDoDia[func].atribuidos && turnosDoDia[func].atribuidos.length > 0) {
                         badgeTxt += ` (${turnosDoDia[func].atribuidos[0]})`;
                     }
                     htmlBadges += `<div class="cal-badge" style="background: rgba(0,0,0,0.3);">${badgeTxt}</div>`;
@@ -996,7 +1028,6 @@
             }
         }
 
-        // Calcula totais da semana (Segunda a Domingo) para comparação
         function calcularTotaisSemana(dataIsoStr, nomeFunc) {
             let d = new Date(dataIsoStr + 'T00:00:00');
             let diaSemana = d.getDay();
@@ -1008,7 +1039,6 @@
             let segIso = formatarDataLocal(segunda);
             let domIso = formatarDataLocal(domingo);
 
-            // 1. Horas Atribuídas na Semana
             let minutosAtribuidos = 0;
             let cursor = new Date(segunda);
             while (cursor <= domingo) {
@@ -1021,7 +1051,6 @@
                 cursor.setDate(cursor.getDate() + 1);
             }
 
-            // 2. Horas Trabalhadas na Semana
             let minutosTrab = 0;
             const regsFunc = registros.filter(r => r.nome === nomeFunc).sort((a,b) => new Date(a.data_completa) - new Date(b.data_completa));
             let entradaPendente = null;
@@ -1054,8 +1083,9 @@
             const modal = document.getElementById('modal-dia');
             const titulo = document.getElementById('modal-titulo');
             const conteudo = document.getElementById('modal-conteudo');
+            if(!modal) return;
             modal.style.display = 'block';
-            titulo.innerText = `Comparativo e Turnos em ${dataIso.split('-').reverse().join('/')}`;
+            if(titulo) titulo.innerText = `Comparativo e Turnos em ${dataIso.split('-').reverse().join('/')}`;
 
             const funcionariosPresentes = Object.keys(turnosDoDia);
             if (funcionariosPresentes.length === 0) {
@@ -1069,7 +1099,7 @@
                 const infoTurno = turnosDoDia[func];
                 const semanaTotais = calcularTotaisSemana(dataIso, func);
 
-                let atribTexto = infoTurno.atribuidos.length > 0 ? infoTurno.atribuidos.join(', ') : 'Nenhuma escala atribuída';
+                let atribTexto = infoTurno.atribuidos && infoTurno.atribuidos.length > 0 ? infoTurno.atribuidos.join(', ') : 'Nenhuma escala atribuída';
 
                 conteudo.innerHTML += `
                     <div style="background:white; padding:12px; margin-bottom:10px; border-radius:4px; border-left: 5px solid ${corFunc}">
@@ -1077,7 +1107,7 @@
                         <p style="font-size:13px; margin:3px 0;">📋 <strong>Shift Atribuído (Escala):</strong> ${atribTexto}</p>
                 `;
 
-                if (infoTurno.trabalhados.length > 0) {
+                if (infoTurno.trabalhados && infoTurno.trabalhados.length > 0) {
                     infoTurno.trabalhados.forEach((item, index) => {
                         let txtIn = item.inTime ? `${item.inTime.hora_local}` : 'Parcial';
                         let txtOut = item.outTime ? `${item.outTime.hora_local}` : 'Em andamento';
@@ -1110,7 +1140,8 @@
                 alert("Registo apagado com sucesso!");
                 await carregarDadosGerais();
                 montarCalendario();
-                document.getElementById('modal-dia').style.display = 'none';
+                const modal = document.getElementById('modal-dia');
+                if(modal) modal.style.display = 'none';
             }
         }
 
