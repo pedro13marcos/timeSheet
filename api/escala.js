@@ -1,78 +1,81 @@
+// api/escala.js
 import { sql } from '@vercel/postgres';
+import webpush from 'web-push';
 
-const webpush = require('web-push');
-
-// Configure suas chaves VAPID (gere um par único para o seu projeto)
+// Configuração das chaves VAPID (certifique-se de adicioná-las nas variáveis de ambiente da Vercel)
 webpush.setVapidDetails(
   'mailto:pedromarcos212@gmail.com',
   process.env.VAPID_PUBLIC_KEY,
   process.env.VAPID_PRIVATE_KEY
 );
 
-// Exemplo dentro da rota POST /api/escala:
-// 1. Verifique se já existiam registros salvos para essa semana (data de início)
-// 2. Salve os novos turnos
-// 3. Dispare a notificação:
-
-const dataInicioSemana = req.body.data_turno; // ou a segunda-feira correspondente
-const jaExistia = verificouSeJaExistiaNoBanco(dataInicioSemana); 
-
-const mensagemTitulo = "Atualização de Escala";
-const mensagemTexto = jaExistia 
-  ? `O roster da semana começando pelo dia ${dataInicioSemana} foi alterado.` 
-  : `O roster da semana começando pelo dia ${dataInicioSemana} já está disponível.`;
-
-// Buscar todas as inscrições salvas no Vercel Postgres
-const assinaturasSalvas = await obterAssinaturasDoBanco(); 
-
-const payload = JSON.stringify({ title: mensagemTitulo, body: mensagemTexto });
-
-assinaturasSalvas.forEach(sub => {
-  webpush.sendNotification(sub, payload).catch(err => console.error("Erro ao enviar push:", err));
-});
-
 export default async function handler(req, res) {
+  if (req.method === 'GET') {
     try {
-        // 1. Cria a tabela automaticamente se ela não existir, 
-        // definindo 'nome' e 'data_turno' como chave única conjunta.
-        await sql`
-            CREATE TABLE IF NOT EXISTS escala_turnos (
-                id SERIAL PRIMARY KEY,
-                nome VARCHAR(100) NOT NULL,
-                data_turno DATE NOT NULL,
-                turno_texto VARCHAR(50) NOT NULL,
-                CONSTRAINT unique_funcionario_data UNIQUE (nome, data_turno)
-            );
-        `;
-
-        // 2. Lógica para buscar todas as escalas (GET)
-        if (req.method === 'GET') {
-            const { rows } = await sql`SELECT * FROM escala_turnos`;
-            return res.status(200).json(rows);
-        } 
-        
-        // 3. Lógica para salvar ou atualizar a escala (POST)
-        if (req.method === 'POST') {
-            const { nome, data_turno, turno_texto } = req.body;
-            
-            // O "ON CONFLICT" resolve o problema de edição: 
-            // Se já existir registo para este funcionário nesta data, ele atualiza (UPDATE).
-            await sql`
-                INSERT INTO escala_turnos (nome, data_turno, turno_texto) 
-                VALUES (${nome}, ${data_turno}, ${turno_texto})
-                ON CONFLICT (nome, data_turno) 
-                DO UPDATE SET turno_texto = EXCLUDED.turno_texto;
-            `;
-            
-            return res.status(200).json({ sucesso: true });
-        }
-
-        return res.status(405).json({ erro: 'Método não permitido' });
-
+      await sql`
+        CREATE TABLE IF NOT EXISTS escalas (
+          id SERIAL PRIMARY KEY,
+          nome TEXT NOT NULL,
+          data_turno DATE NOT NULL,
+          turno_texto TEXT NOT NULL,
+          UNIQUE(nome, data_turno)
+        );
+      `;
+      const { rows } = await sql`SELECT * FROM escalas;`;
+      return res.status(200).json(rows);
     } catch (error) {
-        console.error("Erro na API de escala:", error);
-        return res.status(500).json({ erro: error.message });
+      return res.status(500).json({ error: error.message });
     }
+  }
 
-    
+  if (req.method === 'POST') {
+    try {
+      const { nome, data_turno, turno_texto } = req.body;
+
+      // Verifica se já existiam registros salvos para esta data/semana antes da alteração
+      const { rows: existingRows } = await sql`SELECT * FROM escalas WHERE data_turno = ${data_turno};`;
+      const jaExistia = existingRows.length > 0;
+
+      // Salva ou atualiza o turno no banco
+      await sql`
+        INSERT INTO escalas (nome, data_turno, turno_texto)
+        VALUES (${nome}, ${data_turno}, ${turno_texto})
+        ON CONFLICT (nome, data_turno) DO UPDATE SET turno_texto = ${turno_texto};
+      `;
+
+      // Prepara a mensagem da notificação com base na regra solicitada
+      const mensagemTitulo = "Atualização de Escala (Roster)";
+      const mensagemTexto = jaExistia 
+        ? `O roster da semana começando em ${data_turno} foi alterado.` 
+        : `O roster da semana começando em ${data_turno} já está disponível.`;
+
+      // Busca todas as inscrições push ativas no banco de dados
+      const { rows: subs } = await sql`SELECT * FROM push_subscriptions;`;
+
+      const payload = JSON.stringify({ title: mensagemTitulo, body: mensagemTexto });
+
+      // Dispara a notificação para todos os dispositivos inscritos em segundo plano
+      subs.forEach(sub => {
+        const pushSub = {
+          endpoint: sub.endpoint,
+          keys: { p256dh: sub.p256dh, auth: sub.auth }
+        };
+        webpush.sendNotification(pushSub, payload).catch(async (err) => {
+          // Se a assinatura expirar ou for cancelada, removemos do banco
+          if (err.statusCode === 410 || err.statusCode === 404) {
+            await sql`DELETE FROM subscriptions WHERE endpoint = ${sub.endpoint};`;
+          } else {
+            console.error("Erro ao enviar notificação push:", err);
+          }
+        });
+      });
+
+      return res.status(200).json({ success: true });
+    } catch (error) {
+      console.error("Erro no salvamento da escala:", error);
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  return res.status(405).json({ error: 'Method not allowed' });
 }

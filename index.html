@@ -752,7 +752,7 @@
             }
             try {
                 const registroSw = await navigator.serviceWorker.ready;
-                const vapidPublicKey = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U'; 
+                const vapidPublicKey = 'BLP2pXeQEygESXS-kOVGLKqhezPa4eoBMUVVkju8INworuV_rFVNAN8JyulEeo0atnNsb89FS9nYJixPS9R-m6g'; 
                 const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
 
                 const subscription = await registroSw.pushManager.subscribe({
