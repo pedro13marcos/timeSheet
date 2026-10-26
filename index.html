@@ -144,7 +144,7 @@
                     <button class="btn-acao" onclick="salvarTabelaEscala()" style="margin:0; width: 200px;">💾 Salvar Escala</button>
                 </div>
 
-                <!-- Nova Ferramenta: Copiar Escala de Outra Semana -->
+                <!-- Ferramenta: Copiar Escala de Outra Semana -->
                 <div class="form-manual" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap; background: #eef2f7;">
                     <label style="margin:0; flex: 1; min-width: 200px;">Copiar de outra semana (Segunda):
                         <input type="date" id="escala-origem-copia" style="margin-top: 5px;">
@@ -428,6 +428,7 @@
             renderizarTela();
         }
 
+        // Função corrigida: atualiza dados em background sem reescrever a tabela de escala se o utilizador estiver nela
         async function carregarDadosGerais() {
             try {
                 const resPonto = await fetch('/api/ponto');
@@ -441,9 +442,6 @@
 
             recalcularEstadosDoBanco();
             renderizarTela();
-            if(document.getElementById('aba-escala').classList.contains('ativa')) {
-                carregarTabelaEscala();
-            }
         }
 
         async function dispararRequisicaoAPI(nome, evento, dataIso, horaLocal, resumo) {
@@ -698,7 +696,6 @@
             const diasDestino = obterDiasDaSemana(dataDestinoStr);
             const nomesAtuais = obterListaNomes();
 
-            let copiasFeitas = 0;
             diasOrigem.forEach((diaOrig, index) => {
                 const diaDest = diasDestino[index];
 
@@ -713,7 +710,6 @@
                     const inputDest = document.querySelector(`#tabela-escala-grid input[data-nome="${nome}"][data-data="${diaDest.dataIso}"]`);
                     if (inputDest) {
                         inputDest.value = textoTurno;
-                        copiasFeitas++;
                     }
                 });
             });
@@ -1342,6 +1338,7 @@
         atualizarRelogio();
         carregarDadosGerais();
         
+        // Polling de 5 segundos em background (agora sem interferir enquanto edita escalas)
         setInterval(() => {
             atualizarRelogio();
             atualizarContador();
