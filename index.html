@@ -224,14 +224,9 @@
                 <h1>System Settings</h1>
                 <div class="form-manual">
                     <h3>Push Notifications</h3>
-                    <p style="font-size: 14px; color: #666;">Enable push notifications to receive alerts whenever a weekly schedule is created or updated.</p>
+                    <p style="font-size: 14px; color: #666;">Enable or disable push notifications to receive alerts whenever a weekly schedule is created or updated.</p>
                     <button class="btn-acao" onclick="inscreverNotificacoesPush()" style="background-color: #27ae60; margin-top: 5px;">🔔 Enable Push Notifications</button>
-                    <div class="form-manual">
-                        <h3>Push Notifications</h3>
-                        <p style="font-size: 14px; color: #666;">Enable or disable push notifications to receive alerts whenever a weekly schedule is created or updated.</p>
-                        <button class="btn-acao" onclick="inscreverNotificacoesPush()" style="background-color: #27ae60; margin-top: 5px;">🔔 Enable Push Notifications</button>
-                        <button class="btn-acao" onclick="desinscreverNotificacoesPush()" style="background-color: #c0392b; margin-top: 10px;">🔕 Disable Push Notifications</button>
-                    </div>
+                    <button class="btn-acao" onclick="desinscreverNotificacoesPush()" style="background-color: #c0392b; margin-top: 10px;">🔕 Disable Push Notifications</button>
                 </div>
                 <hr style="margin: 30px 0; border: 0; border-top: 1px solid #ddd;">
                 <div class="form-manual">
@@ -730,7 +725,6 @@
             try { 
                 await Promise.all(promessas); 
                 
-                // Registra o log de alteração de escala localmente para exibição nos relatórios
                 let historicoEscalas = JSON.parse(localStorage.getItem('historicoEscalasLog')) || [];
                 let semanaFormatada = formatarDataBR(dataSegunda);
                 let jaExisteLog = historicoEscalas.find(h => h.semana === semanaFormatada);
@@ -776,6 +770,32 @@
             } catch (err) {
                 console.error("Failed to subscribe to push notifications:", err);
                 alert("Could not enable notifications. Please check permissions.");
+            }
+        }
+
+        async function desinscreverNotificacoesPush() {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                return alert("Push notifications are not supported by your browser/device.");
+            }
+            try {
+                const registroSw = await navigator.serviceWorker.ready;
+                const subscription = await registroSw.pushManager.getSubscription();
+                
+                if (!subscription) {
+                    return alert("No active push subscription found on this device.");
+                }
+
+                await fetch('/api/subscribe', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ endpoint: subscription.endpoint })
+                });
+
+                await subscription.unsubscribe();
+                alert("Push notifications disabled successfully!");
+            } catch (err) {
+                console.error("Failed to unsubscribe from push notifications:", err);
+                alert("Could not disable notifications.");
             }
         }
 
@@ -1201,34 +1221,6 @@
         setInterval(() => { atualizarRelogio(); atualizarContador(); }, 1000);
         setInterval(() => carregarDadosGerais(false), 10000);
         atualizarRelogio(); carregarDadosGerais(true);
-
-        async function desinscreverNotificacoesPush() {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        return alert("Push notifications are not supported by your browser/device.");
-    }
-    try {
-        const registroSw = await navigator.serviceWorker.ready;
-        const subscription = await registroSw.pushManager.getSubscription();
-        
-        if (!subscription) {
-            return alert("No active push subscription found on this device.");
-        }
-
-        // Informa o backend para remover do banco de dados
-        await fetch('/api/subscribe', {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ endpoint: subscription.endpoint })
-        });
-
-        // Remove a inscrição no navegador
-        await subscription.unsubscribe();
-        alert("Push notifications disabled successfully!");
-    } catch (err) {
-        console.error("Failed to unsubscribe from push notifications:", err);
-        alert("Could not disable notifications.");
-    }
-}
     </script>
 </body>
 </html>
