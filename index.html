@@ -44,11 +44,13 @@
         #relogio { font-size: 2.5em; font-weight: bold; text-align: center; margin-bottom: 20px; color: #333; }
         .funcionarios { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         .btn-func { padding: 10px 15px; font-size: 16px; border: 1px solid #ccc; background: #fff; cursor: pointer; border-radius: 4px; font-weight: bold; }
-        .botoes-ponto { display: flex; gap: 10px; margin-bottom: 20px; }
-        .btn-ponto { flex: 1; padding: 15px; font-size: 16px; cursor: pointer; border: none; border-radius: 4px; color: white; font-weight: bold; }
+        .botoes-ponto { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .btn-ponto { flex: 1; min-width: 120px; padding: 15px; font-size: 16px; cursor: pointer; border: none; border-radius: 4px; color: white; font-weight: bold; }
         #btn-in { background-color: #4CAF50; }
+        #btn-break-start { background-color: #ff9800; }
+        #btn-break-end { background-color: #2196F3; }
         #btn-out { background-color: #f44336; }
-        #btn-in:disabled, #btn-out:disabled { background-color: #ccc; cursor: not-allowed; }
+        #btn-in:disabled, #btn-break-start:disabled, #btn-break-end:disabled, #btn-out:disabled { background-color: #ccc; cursor: not-allowed; }
         #status-msg { margin-bottom: 15px; font-weight: bold; color: #555; }
         #log-ponto { background: #f4f4f4; padding: 15px; border-radius: 5px; min-height: 80px; max-height: 200px; overflow-y: auto; margin-bottom: 20px; }
         .registro-item { border-bottom: 1px solid #ddd; padding: 8px 0; display: flex; justify-content: space-between; align-items: center; }
@@ -138,6 +140,8 @@
 
                 <div class="botoes-ponto">
                     <button class="btn-ponto" id="btn-in" onclick="registrarPonto('in')" disabled>Clock In</button>
+                    <button class="btn-ponto" id="btn-break-start" onclick="registrarPonto('break_start')" disabled>Start Break</button>
+                    <button class="btn-ponto" id="btn-break-end" onclick="registrarPonto('break_end')" disabled>End Break</button>
                     <button class="btn-ponto" id="btn-out" onclick="registrarPonto('out')" disabled>Clock Out</button>
                 </div>
 
@@ -259,7 +263,10 @@
                     <label>Adjustment Type:</label>
                     <select id="man-tipo" onchange="atualizarFormularioManual()">
                         <option value="shift">Full Shift (In and Out)</option>
+                        <option value="break">Full Break (Start and End)</option>
                         <option value="in">Clock In Only</option>
+                        <option value="break_start">Start Break Only</option>
+                        <option value="break_end">End Break Only</option>
                         <option value="out">Clock Out Only</option>
                     </select>
 
@@ -359,14 +366,25 @@
         function obterCorFuncionario(nome) { const func = funcionarios.find(f => f.nome === nome); return func ? func.cor : '#607d8b'; }
 
         function recalcularEstadosDoBanco() {
-            obterListaNomes().forEach(nome => { estadoUsuarios[nome] = { trabalhando: false, horaEntrada: null }; });
+            obterListaNomes().forEach(nome => { 
+                estadoUsuarios[nome] = { trabalhando: false, emBreak: false, horaEntrada: null, horaBreak: null }; 
+            });
             const ultimosEventos = {};
             registros.forEach(reg => { if (!ultimosEventos[reg.nome]) ultimosEventos[reg.nome] = reg; });
             Object.keys(ultimosEventos).forEach(nome => {
                 const reg = ultimosEventos[nome];
-                if (reg.evento === 'Clock In' && estadoUsuarios[nome]) {
+                if (!estadoUsuarios[nome]) return;
+                if (reg.evento === 'Clock In' || reg.evento === 'End Break') {
                     estadoUsuarios[nome].trabalhando = true;
+                    estadoUsuarios[nome].emBreak = false;
                     estadoUsuarios[nome].horaEntrada = reg.data_completa;
+                } else if (reg.evento === 'Start Break') {
+                    estadoUsuarios[nome].trabalhando = true;
+                    estadoUsuarios[nome].emBreak = true;
+                    estadoUsuarios[nome].horaBreak = reg.data_completa;
+                } else if (reg.evento === 'Clock Out') {
+                    estadoUsuarios[nome].trabalhando = false;
+                    estadoUsuarios[nome].emBreak = false;
                 }
             });
         }
@@ -420,12 +438,24 @@
 
         async function registrarPonto(tipo) {
             if (!usuarioSelecionado) return;
-            const estado = estadoUsuarios[usuarioSelecionado], agora = new Date(), dataIso = agora.toISOString(), horaLocal = agora.toLocaleTimeString('en-GB');
+            const estado = estadoUsuarios[usuarioSelecionado] || { trabalhando: false, emBreak: false }, agora = new Date(), dataIso = agora.toISOString(), horaLocal = agora.toLocaleTimeString('en-GB');
             try {
                 if (tipo === 'in') {
-                    if (estado && estado.trabalhando) return alert("This employee is already on shift.");
+                    if (estado.trabalhando) return alert("This employee is already on shift.");
                     await dispararRequisicaoAPI(usuarioSelecionado, 'Clock In', dataIso, horaLocal, '');
+                } else if (tipo === 'break_start') {
+                    if (!estado.trabalhando) return alert("Employee must clock in before taking a break.");
+                    if (estado.emBreak) return alert("Employee is already on break.");
+                    await dispararRequisicaoAPI(usuarioSelecionado, 'Start Break', dataIso, horaLocal, '');
+                } else if (tipo === 'break_end') {
+                    if (!estado.emBreak) return alert("Employee is not currently on break.");
+                    const minBreak = Math.floor((agora - new Date(estado.horaBreak || dataIso)) / 60000);
+                    await dispararRequisicaoAPI(usuarioSelecionado, 'End Break', dataIso, horaLocal, `(Break: ${Math.floor(minBreak/60)}h ${minBreak%60}m)`);
                 } else if (tipo === 'out') {
+                    if (!estado.trabalhando) return alert("Employee is not on shift.");
+                    if (estado.emBreak) {
+                        if (!confirm("Employee is currently on break. Clock out anyway?")) return;
+                    }
                     const minTotais = Math.floor((agora - new Date(estado.horaEntrada || dataIso)) / 60000);
                     await dispararRequisicaoAPI(usuarioSelecionado, 'Clock Out', dataIso, horaLocal, `(Duration: ${Math.floor(minTotais/60)}h ${minTotais%60}m)`);
                 }
@@ -486,15 +516,31 @@
 
             renderizarConfigUsuarios();
 
-            const btnIn = document.getElementById('btn-in'), btnOut = document.getElementById('btn-out'), statusMsg = document.getElementById('status-msg');
+            const btnIn = document.getElementById('btn-in');
+            const btnBreakStart = document.getElementById('btn-break-start');
+            const btnBreakEnd = document.getElementById('btn-break-end');
+            const btnOut = document.getElementById('btn-out');
+            const statusMsg = document.getElementById('status-msg');
+
             if (usuarioSelecionado && btnIn && btnOut) {
-                const est = estadoUsuarios[usuarioSelecionado] || { trabalhando: false };
-                statusMsg.innerText = `Status: ${usuarioSelecionado} is ${est.trabalhando ? 'on' : 'off'} shift.`;
-                btnIn.disabled = est.trabalhando; btnOut.disabled = !est.trabalhando;
+                const est = estadoUsuarios[usuarioSelecionado] || { trabalhando: false, emBreak: false };
+                let statusTxt = 'off shift';
+                if (est.trabalhando) {
+                    statusTxt = est.emBreak ? 'on break ☕' : 'on shift 🟢';
+                }
+                statusMsg.innerHTML = `Status: <strong>${usuarioSelecionado}</strong> is ${statusTxt}.`;
+                
+                btnIn.disabled = est.trabalhando;
+                if (btnBreakStart) btnBreakStart.disabled = !est.trabalhando || est.emBreak;
+                if (btnBreakEnd) btnBreakEnd.disabled = !est.trabalhando || !est.emBreak;
+                btnOut.disabled = !est.trabalhando;
                 if(!est.trabalhando) btnOut.innerText = 'Clock Out';
             } else if(statusMsg) {
                 statusMsg.innerText = 'No employee selected';
-                if(btnIn) btnIn.disabled = true; if(btnOut) btnOut.disabled = true;
+                if(btnIn) btnIn.disabled = true; 
+                if(btnBreakStart) btnBreakStart.disabled = true;
+                if(btnBreakEnd) btnBreakEnd.disabled = true;
+                if(btnOut) btnOut.disabled = true;
             }
 
             const divLog = document.getElementById('log-ponto');
@@ -854,9 +900,24 @@
         }
 
         function atualizarContador() {
-            if (usuarioSelecionado && estadoUsuarios[usuarioSelecionado]?.trabalhando && estadoUsuarios[usuarioSelecionado].horaEntrada) {
-                const min = Math.floor((new Date() - new Date(estadoUsuarios[usuarioSelecionado].horaEntrada)) / 60000);
-                const btn = document.getElementById('btn-out'); if(btn) btn.innerText = `Clock Out (${Math.floor(min/60)}h ${min%60}m)`;
+            if (!usuarioSelecionado) return;
+            const est = estadoUsuarios[usuarioSelecionado];
+            if (!est) return;
+
+            if (est.trabalhando && est.horaEntrada) {
+                const min = Math.floor((new Date() - new Date(est.horaEntrada)) / 60000);
+                const btn = document.getElementById('btn-out'); 
+                if(btn) btn.innerText = `Clock Out (${Math.floor(min/60)}h ${min%60}m)`;
+            }
+
+            const btnBreakEnd = document.getElementById('btn-break-end');
+            if (btnBreakEnd) {
+                if (est.emBreak && est.horaBreak) {
+                    const minBreak = Math.floor((new Date() - new Date(est.horaBreak)) / 60000);
+                    btnBreakEnd.innerText = `End Break (${Math.floor(minBreak/60)}h ${minBreak%60}m)`;
+                } else {
+                    btnBreakEnd.innerText = 'End Break';
+                }
             }
         }
 
@@ -981,10 +1042,85 @@
             painel.innerHTML = html;
         }
 
+        // Função auxiliar para calcular tempo trabalhado e break de um funcionário
+        function calcularTemposFuncionario(regsFunc, filtroDataInicio = null, filtroDataFim = null) {
+            let minutosBrutos = 0;
+            let minutosBreak = 0;
+            let entradaPendente = null;
+            let breakPendente = null;
+
+            // Ordena cronologicamente
+            const ordenados = [...regsFunc].sort((a, b) => new Date(a.data_completa) - new Date(b.data_completa));
+
+            ordenados.forEach(reg => {
+                const dtReg = new Date(reg.data_completa);
+                if (reg.evento === 'Clock In') {
+                    entradaPendente = reg;
+                } else if (reg.evento === 'Start Break') {
+                    breakPendente = reg;
+                } else if (reg.evento === 'End Break' && breakPendente) {
+                    const dtStartBreak = new Date(breakPendente.data_completa);
+                    if (!filtroDataInicio && !filtroDataFim) {
+                        minutosBreak += Math.max(0, Math.floor((dtReg - dtStartBreak) / 60000));
+                    } else {
+                        // Verifica se está dentro do intervalo
+                        const inicioVal = Math.max(dtStartBreak.getTime(), filtroDataInicio ? filtroDataInicio.getTime() : dtStartBreak.getTime());
+                        const fimVal = Math.min(dtReg.getTime(), filtroDataFim ? filtroDataFim.getTime() : dtReg.getTime());
+                        if (fimVal > inicioVal) {
+                            minutosBreak += Math.floor((fimVal - inicioVal) / 60000);
+                        }
+                    }
+                    breakPendente = null;
+                } else if (reg.evento === 'Clock Out' && entradaPendente) {
+                    const dtIn = new Date(entradaPendente.data_completa);
+                    if (breakPendente) {
+                        // Se bateu Clock Out sem fechar break, fecha o break
+                        const dtStartBreak = new Date(breakPendente.data_completa);
+                        if (!filtroDataInicio && !filtroDataFim) {
+                            minutosBreak += Math.max(0, Math.floor((dtReg - dtStartBreak) / 60000));
+                        } else {
+                            const inicioVal = Math.max(dtStartBreak.getTime(), filtroDataInicio ? filtroDataInicio.getTime() : dtStartBreak.getTime());
+                            const fimVal = Math.min(dtReg.getTime(), filtroDataFim ? filtroDataFim.getTime() : dtReg.getTime());
+                            if (fimVal > inicioVal) minutosBreak += Math.floor((fimVal - inicioVal) / 60000);
+                        }
+                        breakPendente = null;
+                    }
+
+                    if (!filtroDataInicio && !filtroDataFim) {
+                        minutosBrutos += Math.max(0, Math.floor((dtReg - dtIn) / 60000));
+                    } else {
+                        const inicioVal = Math.max(dtIn.getTime(), filtroDataInicio ? filtroDataInicio.getTime() : dtIn.getTime());
+                        const fimVal = Math.min(dtReg.getTime(), filtroDataFim ? filtroDataFim.getTime() : dtReg.getTime());
+                        if (fimVal > inicioVal) {
+                            minutosBrutos += Math.floor((fimVal - inicioVal) / 60000);
+                        }
+                    }
+                    entradaPendente = null;
+                }
+            });
+
+            // Se o funcionário ainda estiver em shift aberto
+            const minutosLiquidos = Math.max(0, minutosBrutos - minutosBreak);
+            return {
+                brutoMin: minutosBrutos,
+                breakMin: minutosBreak,
+                liquidoMin: minutosLiquidos,
+                brutoH: Math.floor(minutosBrutos / 60),
+                brutoM: minutosBrutos % 60,
+                breakH: Math.floor(minutosBreak / 60),
+                breakM: minutosBreak % 60,
+                liquidoH: Math.floor(minutosLiquidos / 60),
+                liquidoM: minutosLiquidos % 60
+            };
+        }
+
         function calcularTotaisSemana(dataIsoStr, nomeFunc) {
             let d = new Date(dataIsoStr + 'T00:00:00'), diaSemana = d.getDay();
             let segunda = new Date(d.setDate(d.getDate() - diaSemana + (diaSemana === 0 ? -6 : 1)));
             let domingo = new Date(segunda); domingo.setDate(segunda.getDate() + 6);
+            domingo.setHours(23, 59, 59, 999);
+            segunda.setHours(0, 0, 0, 0);
+
             let segIso = formatarDataLocal(segunda), domIso = formatarDataLocal(domingo);
 
             let minutosAtribuidos = 0, cursor = new Date(segunda);
@@ -995,19 +1131,14 @@
                 cursor.setDate(cursor.getDate() + 1);
             }
 
-            let minutosTrab = 0, entradaPendente = null;
-            registros.filter(r => r.nome === nomeFunc).sort((a,b) => new Date(a.data_completa) - new Date(b.data_completa)).forEach(reg => {
-                if (reg.evento === 'Clock In') entradaPendente = reg;
-                else if (reg.evento === 'Clock Out' && entradaPendente) {
-                    let tInIso = formatarDataLocal(new Date(entradaPendente.data_completa));
-                    if (tInIso >= segIso && tInIso <= domIso) minutosTrab += Math.floor((new Date(reg.data_completa) - new Date(entradaPendente.data_completa)) / 60000);
-                    entradaPendente = null;
-                }
-            });
+            const regsFunc = registros.filter(r => r.nome === nomeFunc);
+            const tempos = calcularTemposFuncionario(regsFunc, segunda, domingo);
 
             return {
                 atribuidoH: Math.floor(minutosAtribuidos / 60), atribuidoM: minutosAtribuidos % 60,
-                trabH: Math.floor(minutosTrab / 60), trabM: minutosTrab % 60,
+                brutoH: tempos.brutoH, brutoM: tempos.brutoM,
+                breakH: tempos.breakH, breakM: tempos.breakM,
+                liquidoH: tempos.liquidoH, liquidoM: tempos.liquidoM,
                 periodoStr: `${formatarDataBR(segIso)} to ${formatarDataBR(domIso)}`
             };
         }
@@ -1041,7 +1172,9 @@
                 conteudo.innerHTML += `<hr style="border:0; border-top:1px solid #eee; margin:8px 0;">
                         <p style="font-size:12px; color:#333; margin:2px 0;">📊 <strong>Weekly Total (${semanaTotais.periodoStr}):</strong></p>
                         <p style="font-size:12px; margin:2px 0;">• Assigned Hours: <strong>${semanaTotais.atribuidoH}h ${semanaTotais.atribuidoM}m</strong></p>
-                        <p style="font-size:12px; margin:2px 0;">• Worked Hours: <strong>${semanaTotais.trabH}h ${semanaTotais.trabM}m</strong></p></div>`;
+                        <p style="font-size:12px; margin:2px 0;">• 1. Gross Worked Hours: <strong>${semanaTotais.brutoH}h ${semanaTotais.brutoM}m</strong></p>
+                        <p style="font-size:12px; margin:2px 0;">• 2. Total Break Taken: <strong style="color: #e65100;">${semanaTotais.breakH}h ${semanaTotais.breakM}m</strong></p>
+                        <p style="font-size:12px; margin:2px 0;">• 3. Net Hours Worked (Hours - Break): <strong style="color: #2e7d32;">${semanaTotais.liquidoH}h ${semanaTotais.liquidoM}m</strong></p></div>`;
             });
         }
 
@@ -1079,25 +1212,30 @@
             else if (periodo === 'mensal') { dataLimite.setDate(1); dataLimite.setHours(0, 0, 0, 0); titulo = 'Current Month'; }
             else { dataLimite.setMonth(dataLimite.getMonth() - 6); titulo = 'Last 6 months'; }
 
-            painel.innerHTML = `<h3>Worked Hours - ${titulo}</h3>`;
-            const totais = {}, entradasPendentes = {};
-            obterListaNomes().forEach(nome => totais[nome] = 0); 
+            let htmlRel = `<h3>Summary of Hours - ${titulo}</h3>`;
+            const nomes = obterListaNomes();
 
-            [...registros].filter(reg => new Date(reg.data_completa) >= dataLimite).reverse().forEach(reg => {
-                if (reg.evento === 'Clock In') { entradasPendentes[reg.nome] = new Date(reg.data_completa); } 
-                else if (reg.evento === 'Clock Out' && entradasPendentes[reg.nome]) {
-                    if(totais[reg.nome] !== undefined) totais[reg.nome] += Math.floor((new Date(reg.data_completa) - entradasPendentes[reg.nome]) / 60000);
-                    entradasPendentes[reg.nome] = null;
-                }
+            nomes.forEach(nome => {
+                const regsFunc = registros.filter(r => r.nome === nome && new Date(r.data_completa) >= dataLimite);
+                const tempos = calcularTemposFuncionario(regsFunc);
+                const cor = obterCorFuncionario(nome);
+
+                htmlRel += `<div style="background: white; border-left: 5px solid ${cor}; padding: 10px 14px; margin-bottom: 8px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+                    <div style="font-weight: bold; font-size: 15px; color: ${cor}; margin-bottom: 4px;">👤 ${nome}</div>
+                    <div style="font-size: 13px; color: #444; line-height: 1.6;">
+                        • <strong>1. Horas Brutas (Total Shift):</strong> ${tempos.brutoH}h ${tempos.brutoM}m<br>
+                        • <strong>2. Total Break Tirado:</strong> <span style="color: #e65100; font-weight: bold;">${tempos.breakH}h ${tempos.breakM}m</span><br>
+                        • <strong>3. Horas Trabalhadas Líquidas (Shift - Break):</strong> <span style="color: #2e7d32; font-weight: bold;">${tempos.liquidoH}h ${tempos.liquidoM}m</span>
+                    </div>
+                </div>`;
             });
-
-            obterListaNomes().forEach(nome => { painel.innerHTML += `<p><strong>${nome}:</strong> ${Math.floor((totais[nome] || 0) / 60)}h ${(totais[nome] || 0) % 60}m</p>`; });
 
             const excluidosNoPeriodo = registrosExcluidos.filter(r => new Date(r.deleted_at || r.data_completa) >= dataLimite);
             if (excluidosNoPeriodo.length > 0) {
-                painel.innerHTML += `<div class="deleted-box"><p style="margin:0 0 5px 0; font-weight:bold; color:#c62828;">🗑️ Deleted Records Summary (${excluidosNoPeriodo.length} deleted item/s):</p>` + 
+                htmlRel += `<div class="deleted-box"><p style="margin:0 0 5px 0; font-weight:bold; color:#c62828;">🗑️ Deleted Records Summary (${excluidosNoPeriodo.length} deleted item/s):</p>` + 
                 excluidosNoPeriodo.map(del => `<div class="deleted-item">❌ <strong>${del.nome}</strong>: ${del.evento} originally at ${new Date(del.data_completa).toLocaleString('en-GB')} ${del.resumo || ''} — <em>Deleted on: ${del.deleted_at ? new Date(del.deleted_at).toLocaleString('en-GB') : 'Unknown'}</em></div>`).join('') + `</div>`;
             }
+            painel.innerHTML = htmlRel;
         }
 
         function gerarRelatorioCustomizado() {
@@ -1110,27 +1248,36 @@
             let htmlResultado = `<h3>Report from ${dtInicio.toLocaleString('en-GB')} to ${dtFim.toLocaleString('en-GB')}</h3>`;
 
             usuariosSelecionadosRel.forEach(nome => {
-                let minutosTotais = 0, registrosNoPeriodo = [], entradaPendente = null;
-                registros.filter(r => r.nome === nome).sort((a,b) => new Date(a.data_completa) - new Date(b.data_completa)).forEach(reg => {
-                    if (reg.evento === 'Clock In') { entradaPendente = reg; } 
-                    else if (reg.evento === 'Clock Out' && entradaPendente) {
-                        let tIn = new Date(entradaPendente.data_completa), tOut = new Date(reg.data_completa);
-                        if (tIn <= dtFim && tOut >= dtInicio) {
-                            minutosTotais += Math.floor((tOut - tIn) / 60000);
-                            registrosNoPeriodo.push(entradaPendente); registrosNoPeriodo.push(reg);
-                        }
-                        entradaPendente = null;
-                    }
-                });
+                const regsFunc = registros.filter(r => r.nome === nome);
+                const tempos = calcularTemposFuncionario(regsFunc, dtInicio, dtFim);
+                
+                // Registros visíveis no período
+                const registrosNoPeriodo = regsFunc.filter(r => {
+                    const dt = new Date(r.data_completa);
+                    return dt >= dtInicio && dt <= dtFim;
+                }).sort((a,b) => new Date(b.data_completa) - new Date(a.data_completa));
 
-                registrosNoPeriodo = [...new Set(registrosNoPeriodo)].sort((a,b) => new Date(b.data_completa) - new Date(a.data_completa));
                 const excluidosFunc = registrosExcluidos.filter(r => r.nome === nome && new Date(r.deleted_at || r.data_completa) >= dtInicio && new Date(r.deleted_at || r.data_completa) <= dtFim);
+                const cor = obterCorFuncionario(nome);
 
-                htmlResultado += `<div style="background:#e3f2fd; padding:15px; margin-top:10px; border-radius:5px; border-left: 5px solid ${obterCorFuncionario(nome)}">
-                        <p><strong>Employee: ${nome}</strong></p><p>⏱️ Hours worked in period: <strong>${Math.floor(minutosTotais / 60)}h ${minutosTotais % 60}m</strong></p><p><strong>Active Records Found:</strong></p>`;
+                htmlResultado += `<div style="background:#e3f2fd; padding:15px; margin-top:10px; border-radius:5px; border-left: 5px solid ${cor}">
+                        <p style="margin: 0 0 8px 0;"><strong style="font-size: 16px; color: ${cor};">👤 Employee: ${nome}</strong></p>
+                        <div style="background: white; padding: 10px; border-radius: 4px; margin-bottom: 12px; font-size: 14px; line-height: 1.6;">
+                            • <strong>1. Horas Brutas do Período:</strong> ${tempos.brutoH}h ${tempos.brutoM}m<br>
+                            • <strong>2. Total de Break Tirado:</strong> <span style="color: #e65100; font-weight: bold;">${tempos.breakH}h ${tempos.breakM}m</span><br>
+                            • <strong>3. Horas Efetivamente Trabalhadas (Líquidas):</strong> <span style="color: #2e7d32; font-weight: bold;">${tempos.liquidoH}h ${tempos.liquidoM}m</span>
+                        </div>
+                        <p style="margin: 6px 0;"><strong>Active Records Found in Period:</strong></p>`;
 
                 htmlResultado += registrosNoPeriodo.length === 0 ? `<p style="font-size:14px; color:#666;">No time records in this interval.</p>` :
-                    registrosNoPeriodo.map(r => `<div style="font-size:13px; background:white; padding:6px; margin-top:4px; border-radius:3px;">📅 ${new Date(r.data_completa).toLocaleString('en-GB')} - <strong>${r.evento}</strong> ${r.resumo || ''}</div>`).join('');
+                    registrosNoPeriodo.map(r => {
+                        let icone = '📅';
+                        if (r.evento === 'Clock In') icone = '🟢';
+                        else if (r.evento === 'Start Break') icone = '☕';
+                        else if (r.evento === 'End Break') icone = '⚡';
+                        else if (r.evento === 'Clock Out') icone = '🔴';
+                        return `<div style="font-size:13px; background:white; padding:6px; margin-top:4px; border-radius:3px;">${icone} ${new Date(r.data_completa).toLocaleString('en-GB')} - <strong>${r.evento}</strong> ${r.resumo || ''}</div>`;
+                    }).join('');
 
                 if (excluidosFunc.length > 0) {
                     htmlResultado += `<div class="deleted-box"><p style="margin:0 0 5px 0; font-weight:bold; color:#c62828;">🗑️ Deleted Records Log (${excluidosFunc.length} deleted item/s):</p>` + 
@@ -1146,18 +1293,34 @@
             const grupoData1 = document.getElementById('grupo-data1');
             const grupoData2 = document.getElementById('grupo-data2');
             const lblData1 = document.getElementById('lbl-data1');
+            const lblData2 = document.getElementById('lbl-data2');
 
             if (tipo === 'shift') {
                 grupoData1.style.display = 'block';
                 grupoData2.style.display = 'block';
                 lblData1.innerText = 'Entry Date and Time:';
+                lblData2.innerText = 'Exit Date and Time:';
+            } else if (tipo === 'break') {
+                grupoData1.style.display = 'block';
+                grupoData2.style.display = 'block';
+                lblData1.innerText = 'Start Break Date and Time:';
+                lblData2.innerText = 'End Break Date and Time:';
             } else if (tipo === 'in') {
                 grupoData1.style.display = 'block';
                 grupoData2.style.display = 'none';
                 lblData1.innerText = 'Clock In Date and Time:';
+            } else if (tipo === 'break_start') {
+                grupoData1.style.display = 'block';
+                grupoData2.style.display = 'none';
+                lblData1.innerText = 'Start Break Date and Time:';
+            } else if (tipo === 'break_end') {
+                grupoData1.style.display = 'none';
+                grupoData2.style.display = 'block';
+                lblData2.innerText = 'End Break Date and Time:';
             } else if (tipo === 'out') {
                 grupoData1.style.display = 'none';
                 grupoData2.style.display = 'block';
+                lblData2.innerText = 'Clock Out Date and Time:';
             }
         }
 
@@ -1183,9 +1346,21 @@
                     const minTotais = Math.floor((dt2 - dt1) / 60000);
                     await dispararRequisicaoAPI(nome, 'Clock In', dt1.toISOString(), dt1.toLocaleTimeString('en-GB'), '(Manual)');
                     await dispararRequisicaoAPI(nome, 'Clock Out', dt2.toISOString(), dt2.toLocaleTimeString('en-GB'), `(Manual: ${Math.floor(minTotais/60)}h ${minTotais%60}m)`);
+                } else if (tipo === 'break') {
+                    const dt1 = new Date(valData1), dt2 = new Date(valData2);
+                    if (dt2 <= dt1) return alert("The end break time must be after the start break time.");
+                    const minBreak = Math.floor((dt2 - dt1) / 60000);
+                    await dispararRequisicaoAPI(nome, 'Start Break', dt1.toISOString(), dt1.toLocaleTimeString('en-GB'), '(Manual Break)');
+                    await dispararRequisicaoAPI(nome, 'End Break', dt2.toISOString(), dt2.toLocaleTimeString('en-GB'), `(Manual Break: ${Math.floor(minBreak/60)}h ${minBreak%60}m)`);
                 } else if (tipo === 'in') {
                     const dt1 = new Date(valData1);
                     await dispararRequisicaoAPI(nome, 'Clock In', dt1.toISOString(), dt1.toLocaleTimeString('en-GB'), '(Manual Adjustment)');
+                } else if (tipo === 'break_start') {
+                    const dt1 = new Date(valData1);
+                    await dispararRequisicaoAPI(nome, 'Start Break', dt1.toISOString(), dt1.toLocaleTimeString('en-GB'), '(Manual Adjustment)');
+                } else if (tipo === 'break_end') {
+                    const dt2 = new Date(valData2);
+                    await dispararRequisicaoAPI(nome, 'End Break', dt2.toISOString(), dt2.toLocaleTimeString('en-GB'), '(Manual Adjustment)');
                 } else if (tipo === 'out') {
                     const dt2 = new Date(valData2);
                     await dispararRequisicaoAPI(nome, 'Clock Out', dt2.toISOString(), dt2.toLocaleTimeString('en-GB'), '(Manual Adjustment)');
